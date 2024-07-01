@@ -30,6 +30,7 @@
 
 from wheel_legged_gym import WHEEL_LEGGED_GYM_ROOT_DIR, WHEEL_LEGGED_GYM_ENVS_DIR
 from .base.legged_robot import LeggedRobot
+
 from .wheel_legged.wheel_legged_config import WheelLeggedCfg, WheelLeggedCfgPPO
 from .wheel_legged_vmc.wheel_legged_vmc import LeggedRobotVMC
 from .wheel_legged_vmc.wheel_legged_vmc_config import (
@@ -41,6 +42,11 @@ from .wheel_legged_vmc_flat.wheel_legged_vmc_flat_config import (
     WheelLeggedVMCFlatCfgPPO,
 )
 
+from .meta_wl.meta_wl_config import MetaWLCfg, MetaWLCfgPPO
+from .meta_wl_vmc.meta_wl_vmc_config import (
+    MetaWLVMCCfg,
+    MetaWLVMCCfgPPO,
+)
 
 import os
 
