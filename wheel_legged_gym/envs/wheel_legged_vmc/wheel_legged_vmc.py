@@ -39,7 +39,7 @@ from isaacgym import gymtorch, gymapi, gymutil
 
 import torch
 from torch import Tensor
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional, Union, Any
 
 from wheel_legged_gym import WHEEL_LEGGED_GYM_ROOT_DIR
 from wheel_legged_gym.envs.base.legged_robot import LeggedRobot
