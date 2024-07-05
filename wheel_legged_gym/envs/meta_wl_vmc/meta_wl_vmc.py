@@ -20,7 +20,7 @@ from wheel_legged_gym.utils.math import (
     torch_rand_sqrt_float,
 )
 from wheel_legged_gym.utils.helpers import class_to_dict
-from .meta_wl_vmc_config import MetaWLVMCCfg, calc_knee, ActionIdx, JointIdx
+from .meta_wl_vmc_config import MetaWLVMCCfg, ActionIdx, JointIdx
 
 
 class MetaWLVMC(LeggedRobot):
@@ -87,8 +87,8 @@ class MetaWLVMC(LeggedRobot):
         # YXC: 3 + 3 + 3 + 2 + 2 + 2 + 4 = 19
         return obs_buf
 
-    def _compute_observations(self):
-        self.obs_buf = self.compute_proprioception_observations()
+    def compute_observations(self):
+        self.obs_buf = self._compute_proprioception_observations()
 
         if self.cfg.env.num_privileged_obs is not None:
             heights = (
@@ -127,6 +127,17 @@ class MetaWLVMC(LeggedRobot):
             (self.obs_history[:, self.num_obs:], self.obs_buf), dim=-1
         )
 
+    def _compute_knee(self, hip):
+        l1 = self.cfg.asset.l1
+        l2 = self.cfg.asset.l2
+        l3 = self.cfg.asset.l3
+        l4 = self.cfg.asset.l4
+        diagonal = l1 ** 2 + l2 ** 2 - 2 * l1 * l2 * torch.cos(hip)
+        diagonal = torch.sqrt(diagonal)
+        angle1 = torch.acos((l4**2 + diagonal**2 - l3**2) / (2 * l4 * diagonal))
+        angle2 = torch.acos((l2**2 + diagonal**2 - l1**2) / (2 * l2 * diagonal))
+        return self.pi - angle1 - angle2
+
     def _compute_torques(self, actions):
         # YXC: hip uses position PD control according to the action
         hip_goal_pos = torch.cat(
@@ -141,7 +152,7 @@ class MetaWLVMC(LeggedRobot):
                        - self.d_gains[:, hip_j] * self.dof_vel[:, hip_j])
 
         # YXC: knee uses position PD control according to hip position
-        knee_goal_pos = calc_knee(hip_goal_pos)
+        knee_goal_pos = self._compute_knee(hip_goal_pos)
         knee_j = [JointIdx.l_knee, JointIdx.r_knee]
         knee_torques = (self.p_gains[:, knee_j] * (knee_goal_pos - self.dof_pos[:, knee_j])
                         - self.d_gains[:, knee_j] * self.dof_vel[:, knee_j])

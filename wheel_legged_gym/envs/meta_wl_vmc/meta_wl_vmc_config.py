@@ -1,14 +1,11 @@
+import torch
+
 from wheel_legged_gym.envs.base.legged_robot_config import (
     LeggedRobotCfg,
     LeggedRobotCfgPPO,
 )
 
 from enum import Enum
-
-
-def calc_knee(hip):
-    # YXC: TODO: implement this function
-    return 0.5 * hip
 
 
 class ActionIdx(Enum):
@@ -44,6 +41,13 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         upper_len = 0.15
         lower_len = 0.25
 
+        # links
+        l1 = 0.07  # fixed link
+        l2 = 0.1566  # driving link
+        l3 = 0.1447  # follower link
+        l4 = 0.0375  # output link
+        l5 = 0.180 - l4  # output link extension
+
     class control(LeggedRobotCfg.control):
         action_scale_pos = 0.5
         action_scale_vel = 10.0
@@ -51,13 +55,13 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         feedforward_force = 40.0  # [N]
 
         # PD Drive parameters:
-        stiffness = {"hip": 0.0, "knee": 0.0, "wheel": 0}  # [N*m/rad]
-        damping = {"hip": 0.0, "knee": 0.0, "wheel": 0.5}  # [N*m*s/rad]
+        stiffness = {"hip": 100.0, "knee": 100.0, "wheel": 0}  # [N*m/rad]
+        damping = {"hip": 1.0, "knee": 1.0, "wheel": 0.5}  # [N*m*s/rad]
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.25]  # x,y,z [m]
         init_hip = 0.5  # [rad]
-        init_knee = calc_knee(init_hip)
+        init_knee = 0.35
         default_joint_angles = {
             "l_hip": init_hip,
             "l_knee": init_knee,
