@@ -8,10 +8,7 @@ from isaacgym.torch_utils import *
 from isaacgym import gymtorch, gymapi, gymutil
 
 import torch
-from torch import Tensor
-from typing import Tuple, Dict
 
-from wheel_legged_gym import WHEEL_LEGGED_GYM_ROOT_DIR
 from wheel_legged_gym.envs.base.legged_robot import LeggedRobot
 from wheel_legged_gym.utils.terrain import Terrain
 from wheel_legged_gym.utils.math import (
@@ -19,7 +16,6 @@ from wheel_legged_gym.utils.math import (
     wrap_to_pi,
     torch_rand_sqrt_float,
 )
-from wheel_legged_gym.utils.helpers import class_to_dict
 from .meta_wl_vmc_config import MetaWLVMCCfg, ActionIdx, JointIdx
 
 
@@ -36,7 +32,6 @@ class MetaWLVMC(LeggedRobot):
         self.render()
         self.pre_physics_step()
         for _ in range(self.cfg.control.decimation):
-            self._leg_post_physics_step()
             self.envs_steps_buf += 1
             self.action_fifo = torch.cat(
                 (self.actions.unsqueeze(1), self.action_fifo[:, :-1, :]), dim=1
@@ -56,22 +51,141 @@ class MetaWLVMC(LeggedRobot):
             self.compute_dof_vel()
         self.post_physics_step()
 
-    def _leg_post_physics_step(self):
-        # YXC: store feedback info to the buffer
-        self.hip_pos = torch.cat(
-            (self.dof_pos[:, JointIdx.l_hip].unsqueeze(1), self.dof_pos[:, JointIdx.r_hip].unsqueeze(1)), dim=1
-        )  # YXC: TODO: add to init_buffers
-        self.knee_pos = torch.cat(
-            (self.dof_pos[:, JointIdx.l_knee].unsqueeze(1), self.dof_pos[:, JointIdx.r_knee].unsqueeze(1)), dim=1
-        )
-        self.hip_vel = torch.cat(
-            (self.dof_vel[:, JointIdx.l_hip].unsqueeze(1), self.dof_vel[:, JointIdx.r_hip].unsqueeze(1)), dim=1
-        )
-        self.knee_vel = torch.cat(
-            (self.dof_vel[:, JointIdx.l_knee].unsqueeze(1), self.dof_vel[:, JointIdx.r_knee].unsqueeze(1)), dim=1
+        # return clipped obs, clipped states (None), rewards, dones and infos
+        clip_obs = self.cfg.normalization.clip_observations
+        self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
+        if self.privileged_obs_buf is not None:
+            self.privileged_obs_buf = torch.clip(
+                self.privileged_obs_buf, -clip_obs, clip_obs
+            )
+        return (
+            self.obs_buf,
+            self.privileged_obs_buf,
+            self.rew_buf,
+            self.reset_buf,
+            self.extras,
+            self.obs_history,
         )
 
-    def _compute_proprioception_observations(self):
+    def post_physics_step(self):
+        self.gym.refresh_actor_root_state_tensor(self.sim)
+        self.gym.refresh_net_contact_force_tensor(self.sim)
+        self.gym.refresh_rigid_body_state_tensor(self.sim)
+
+        self.episode_length_buf += 1
+        self.common_step_counter += 1
+
+        # prepare quantities
+        self.base_quat[:] = self.root_states[:, 3:7]
+        self.base_lin_vel = (self.base_position - self.last_base_position) / self.dt
+        self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.base_lin_vel)
+        self.base_ang_vel[:] = quat_rotate_inverse(
+            self.base_quat, self.root_states[:, 10:13]
+        )
+        self.dof_acc = (self.last_dof_vel - self.dof_vel) / self.dt
+
+        self.projected_gravity[:] = quat_rotate_inverse(
+            self.base_quat, self.gravity_vec
+        )
+
+        self._post_physics_step_callback()
+
+        # compute observations, rewards, resets, ...
+        self.check_termination()
+        self.compute_reward()
+        env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
+        self.reset_idx(env_ids)
+        self.compute_observations()  # in some cases a simulation step might be required to refresh some obs (for example body positions)
+
+        self.last_actions[:, :, 1] = self.last_actions[:, :, 0]
+        self.last_actions[:, :, 0] = self.actions[:]
+        self.last_base_position[:] = self.base_position[:]
+        self.last_dof_vel[:] = self.dof_vel[:]
+        self.last_root_vel[:] = self.root_states[:, 7:13]
+
+        if self.viewer and self.enable_viewer_sync and self.debug_viz:
+            self._draw_debug_vis()
+
+    def reset_idx(self, env_ids):
+        """Reset some environments.
+            Calls self._reset_dofs(env_ids), self._reset_root_states(env_ids), and self._resample_commands(env_ids)
+            [Optional] calls self._update_terrain_curriculum(env_ids), self.update_command_curriculum(env_ids) and
+            Logs episode info
+            Resets some buffers
+
+        Args:
+            env_ids (list[int]): List of environment ids which must be reset
+        """
+        if len(env_ids) == 0:
+            return
+        # update curriculum
+        if self.cfg.terrain.curriculum:
+            self._update_terrain_curriculum(env_ids)
+            if self.cfg.commands.curriculum:
+                time_out_env_ids = self.time_out_buf.nonzero(as_tuple=False).flatten()
+                self.update_command_curriculum(time_out_env_ids)
+        # avoid updating command curriculum at each step since the maximum command is common to all envs
+        if self.cfg.commands.curriculum and (
+            self.common_step_counter % self.max_episode_length == 0
+        ):
+            self.update_command_curriculum(env_ids)
+
+        # reset robot states
+        self._reset_dofs(env_ids)
+        self._reset_root_states(env_ids)
+
+        self._resample_commands(env_ids)
+
+        # reset buffers
+        self.last_actions[env_ids] = 0.0
+        self.last_dof_vel[env_ids] = 0.0
+        self.feet_air_time[env_ids] = 0.0
+        self.episode_length_buf[env_ids] = 0
+        self.reset_buf[env_ids] = 1
+        self.fail_buf[env_ids] = 0
+        self.envs_steps_buf[env_ids] = 0
+        self.last_dof_pos[env_ids] = self.dof_pos[env_ids]
+        self.last_base_position[env_ids] = self.base_position[env_ids]
+        self.obs_history[env_ids] = 0
+        obs_buf = self.compute_proprioception_observations()
+        self.obs_history[env_ids] = obs_buf[env_ids].repeat(1, self.obs_history_length)
+        # fill extras
+        self.extras["episode"] = {}
+        for key in self.episode_sums.keys():
+            self.extras["episode"]["rew_" + key] = (
+                torch.mean(self.episode_sums[key][env_ids]) / self.max_episode_length_s
+            )
+            self.episode_sums[key][env_ids] = 0.0
+        # log additional curriculum info
+        if self.cfg.terrain.curriculum:
+            self.extras["episode"]["terrain_level"] = torch.mean(
+                self.terrain_levels.float()
+            )
+        if self.cfg.commands.curriculum:
+            self.extras["episode"]["a_flat_max_command_x"] = torch.mean(
+                self.command_ranges["lin_vel_x"][self.flat_idx, 1].float()
+            )
+        if self.cfg.terrain.curriculum and self.cfg.commands.curriculum:
+            self.extras["episode"]["a_smooth_slope_max_command_x"] = torch.mean(
+                self.command_ranges["lin_vel_x"][self.smooth_slope_idx, 1].float()
+            )
+            self.extras["episode"]["a_rough_slope_max_command_x"] = torch.mean(
+                self.command_ranges["lin_vel_x"][self.rough_slope_idx, 1].float()
+            )
+            self.extras["episode"]["a_stair_up_max_command_x"] = torch.mean(
+                self.command_ranges["lin_vel_x"][self.stair_up_idx, 1].float()
+            )
+            self.extras["episode"]["a_stair_down_max_command_x"] = torch.mean(
+                self.command_ranges["lin_vel_x"][self.stair_down_idx, 1].float()
+            )
+            self.extras["episode"]["a_discrete_max_command_x"] = torch.mean(
+                self.command_ranges["lin_vel_x"][self.discrete_idx, 1].float()
+            )
+        # send timeout info to the algorithm
+        if self.cfg.env.send_timeouts:
+            self.extras["time_outs"] = self.time_out_buf
+
+    def compute_proprioception_observations(self):
         obs_buf = torch.cat(
             (
                 self.base_ang_vel * self.obs_scales.ang_vel,
@@ -88,7 +202,7 @@ class MetaWLVMC(LeggedRobot):
         return obs_buf
 
     def compute_observations(self):
-        self.obs_buf = self._compute_proprioception_observations()
+        self.obs_buf = self.compute_proprioception_observations()
 
         if self.cfg.env.num_privileged_obs is not None:
             heights = (
@@ -174,6 +288,27 @@ class MetaWLVMC(LeggedRobot):
         torque[:, knee_j] = knee_torques
         torque[:, wheel_j] = wheel_torques
         return torque
+
+    def _get_noise_scale_vec(self, cfg):
+        noise_vec = torch.zeros_like(self.obs_buf[0])
+        self.add_noise = self.cfg.noise.add_noise
+        noise_scales = self.cfg.noise.noise_scales
+        noise_level = self.cfg.noise.noise_level
+
+        # YXC: defined according to the observation in compute_proprioception_observations()
+        noise_vec[:3] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
+        noise_vec[3:6] = noise_scales.gravity * noise_level
+        noise_vec[6:8] = 0.0  # commands
+        noise_vec[8:10] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos  # dof_pos
+        noise_vec[10:14] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel  # dof_vel
+        noise_vec[14:20] = 0.0  # previous actions
+        if self.cfg.terrain.measure_heights:
+            noise_vec[48:235] = (
+                noise_scales.height_measurements
+                * noise_level
+                * self.obs_scales.height_measurements
+            )
+        return noise_vec
 
     def _init_buffers(self):
         """Initialize torch tensors which will contain simulation states and processed quantities"""
@@ -346,18 +481,6 @@ class MetaWLVMC(LeggedRobot):
         self.measured_heights = 0
         self.base_height = torch.mean(
             self.root_states[:, 2].unsqueeze(1) - self.measured_heights, dim=1
-        )
-        self.hip_pos = torch.zeros(
-            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.knee_pos = torch.zeros(
-            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.hip_vel = torch.zeros(
-            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.knee_vel = torch.zeros(
-            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
         )
 
         # joint positions offsets and PD gains

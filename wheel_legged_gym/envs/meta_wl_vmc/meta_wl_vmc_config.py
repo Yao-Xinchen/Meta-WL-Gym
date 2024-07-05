@@ -60,8 +60,8 @@ class MetaWLVMCCfg(LeggedRobotCfg):
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.25]  # x,y,z [m]
-        init_hip = 0.5  # [rad]
-        init_knee = 0.35
+        init_hip = torch.pi / 4  # [rad]
+        init_knee = 0.45
         default_joint_angles = {
             "l_hip": init_hip,
             "l_knee": init_knee,
