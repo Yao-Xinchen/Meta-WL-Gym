@@ -59,16 +59,16 @@ class MetaWLVMC(LeggedRobot):
     def _leg_post_physics_step(self):
         # YXC: store feedback info to the buffer
         self.hip_pos = torch.cat(
-            (self.dof_pos[:, 0].unsqueeze(1), self.dof_pos[:, 3].unsqueeze(1)), dim=1
+            (self.dof_pos[:, JointIdx.l_hip].unsqueeze(1), self.dof_pos[:, JointIdx.r_hip].unsqueeze(1)), dim=1
         )  # YXC: TODO: add to init_buffers
         self.knee_pos = torch.cat(
-            (self.dof_pos[:, 1].unsqueeze(1), self.dof_pos[:, 4].unsqueeze(1)), dim=1
+            (self.dof_pos[:, JointIdx.l_knee].unsqueeze(1), self.dof_pos[:, JointIdx.r_knee].unsqueeze(1)), dim=1
         )
         self.hip_vel = torch.cat(
-            (self.dof_vel[:, 0].unsqueeze(1), self.dof_vel[:, 3].unsqueeze(1)), dim=1
+            (self.dof_vel[:, JointIdx.l_hip].unsqueeze(1), self.dof_vel[:, JointIdx.r_hip].unsqueeze(1)), dim=1
         )
         self.knee_vel = torch.cat(
-            (self.dof_vel[:, 1].unsqueeze(1), self.dof_vel[:, 4].unsqueeze(1)), dim=1
+            (self.dof_vel[:, JointIdx.l_knee].unsqueeze(1), self.dof_vel[:, JointIdx.r_knee].unsqueeze(1)), dim=1
         )
 
     def _compute_proprioception_observations(self):
@@ -77,9 +77,9 @@ class MetaWLVMC(LeggedRobot):
                 self.base_ang_vel * self.obs_scales.ang_vel,
                 self.projected_gravity,
                 self.commands[:, :3] * self.commands_scale,
-                self.dof_pos[:, [0, 3]] * self.obs_scales.dof_pos,  # YXC: hip pos
-                self.dof_vel[:, [0, 3]] * self.obs_scales.dof_vel,  # YXC: hip vel
-                self.dof_vel[:, [2, 5]] * self.obs_scales.dof_vel,  # YXC: wheel vel
+                self.dof_pos[:, [JointIdx.l_hip, JointIdx.r_hip]] * self.obs_scales.dof_pos,
+                self.dof_vel[:, [JointIdx.l_hip, JointIdx.r_hip]] * self.obs_scales.dof_vel,
+                self.dof_vel[:, [JointIdx.l_wheel, JointIdx.r_wheel]] * self.obs_scales.dof_vel,
                 self.actions
             ),
             dim=-1,
@@ -391,18 +391,6 @@ class MetaWLVMC(LeggedRobot):
                 p_gains_scale_min,
                 p_gains_scale_max,
                 self.p_gains.shape,
-                device=self.device,
-            )
-            self.theta_kp *= torch_rand_float(
-                p_gains_scale_min,
-                p_gains_scale_max,
-                self.theta_kp.shape,
-                device=self.device,
-            )
-            self.l0_kp *= torch_rand_float(
-                p_gains_scale_min,
-                p_gains_scale_max,
-                self.l0_kp.shape,
                 device=self.device,
             )
         if self.cfg.domain_rand.randomize_Kd:

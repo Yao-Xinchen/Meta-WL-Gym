@@ -50,9 +50,6 @@ class MetaWLVMCCfg(LeggedRobotCfg):
 
         feedforward_force = 40.0  # [N]
 
-        kp_l0 = 900.0  # [N/m]
-        kd_l0 = 20.0  # [N*s/m]
-
         # PD Drive parameters:
         stiffness = {"hip": 0.0, "knee": 0.0, "wheel": 0}  # [N*m/rad]
         damping = {"hip": 0.0, "knee": 0.0, "wheel": 0.5}  # [N*m*s/rad]
@@ -69,16 +66,6 @@ class MetaWLVMCCfg(LeggedRobotCfg):
             "r_knee": init_knee,
             "r_wheel": 0.0,
         }
-
-    class normalization(LeggedRobotCfg.normalization):
-        class obs_scales(LeggedRobotCfg.normalization.obs_scales):
-            l0 = 5.0
-            l0_dot = 0.25
-
-    class noise(LeggedRobotCfg.noise):
-        class noise_scales(LeggedRobotCfg.noise.noise_scales):
-            l0 = 0.02
-            l0_dot = 0.1
 
 
 class MetaWLVMCCfgPPO(LeggedRobotCfgPPO):
