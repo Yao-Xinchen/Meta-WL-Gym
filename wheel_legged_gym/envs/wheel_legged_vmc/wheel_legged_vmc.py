@@ -52,6 +52,13 @@ from wheel_legged_gym.utils.math import (
 from wheel_legged_gym.utils.helpers import class_to_dict
 from .wheel_legged_vmc_config import WheelLeggedVMCCfg
 
+# dof:
+# 0: lf0_Joint
+# 1: lf1_Joint
+# 2: l_wheel_Joint
+# 3: rf0_Joint
+# 4: rf1_Joint
+# 5: r_wheel_Joint
 
 class LeggedRobotVMC(LeggedRobot):
     def __init__(
@@ -371,8 +378,8 @@ class LeggedRobotVMC(LeggedRobot):
         l0_ref = (
             torch.cat(
                 (
-                    (actions[:, 1]).unsqueeze(1),
-                    (actions[:, 4]).unsqueeze(1),
+                    (actions[:, 1]).unsqueeze(1),  # left
+                    (actions[:, 4]).unsqueeze(1),  # right
                 ),
                 axis=1,
             )
@@ -381,8 +388,8 @@ class LeggedRobotVMC(LeggedRobot):
         wheel_vel_ref = (
             torch.cat(
                 (
-                    (actions[:, 2]).unsqueeze(1),
-                    (actions[:, 5]).unsqueeze(1),
+                    (actions[:, 2]).unsqueeze(1),  # left
+                    (actions[:, 5]).unsqueeze(1),  # right
                 ),
                 axis=1,
             )

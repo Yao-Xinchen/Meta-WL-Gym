@@ -42,7 +42,7 @@ from .wheel_legged_vmc_flat.wheel_legged_vmc_flat_config import (
     WheelLeggedVMCFlatCfgPPO,
 )
 
-from .meta_wl.meta_wl_config import MetaWLCfg, MetaWLCfgPPO
+from .meta_wl_vmc.meta_wl_vmc import MetaWLVMC
 from .meta_wl_vmc.meta_wl_vmc_config import (
     MetaWLVMCCfg,
     MetaWLVMCCfgPPO,
@@ -63,4 +63,8 @@ task_registry.register(
     LeggedRobotVMC,
     WheelLeggedVMCFlatCfg(),
     WheelLeggedVMCFlatCfgPPO(),
+)
+
+task_registry.register(
+    "meta_wl_vmc", MetaWLVMC, MetaWLVMCCfg(), MetaWLVMCCfgPPO()
 )
