@@ -27,7 +27,7 @@ class JointIdx(Enum):
 class MetaWLVMCCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         num_envs = 2048
-        num_observations = 19  # YXC: defined in _compute_proprioception_observations()
+        num_observations = 18  # YXC: defined in _compute_proprioception_observations()
         num_privileged_obs = num_observations + 7 * 11 + 3 + 6 * 5 + 3 + 3
         num_actions = len(ActionIdx)  # YXC: 4
 
