@@ -38,7 +38,7 @@ class MetaWLVMC(LeggedRobot):
             )
             self.torques = self._compute_torques(
                 self.action_fifo[torch.arange(self.num_envs), self.action_delay_idx, :]
-            ).view(self.torques.shape)
+            )
             self.gym.set_dof_actuation_force_tensor(
                 self.sim, gymtorch.unwrap_tensor(self.torques)
             )
@@ -77,7 +77,7 @@ class MetaWLVMC(LeggedRobot):
 
         # prepare quantities
         self.base_quat[:] = self.root_states[:, 3:7]
-        self.base_euler_angle = get_euler_xyz(self.base_quat)
+        self.base_euler_angle = torch.stack(get_euler_xyz(self.base_quat), dim=-1)
         # self.base_lin_vel = (self.base_position - self.last_base_position) / self.dt
         # self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.base_lin_vel)
         self.base_lin_vel = quat_rotate_inverse(
@@ -88,6 +88,10 @@ class MetaWLVMC(LeggedRobot):
         #     self.base_quat, self.root_states[:, 10:13]
         # )
         self.dof_acc = (self.last_dof_vel - self.dof_vel) / self.dt
+
+        self.projected_gravity[:] = quat_rotate_inverse(
+            self.base_quat, self.gravity_vec
+        )
 
         self._post_physics_step_callback()
 
@@ -192,9 +196,9 @@ class MetaWLVMC(LeggedRobot):
                 self.base_euler_angle[:, :2] * self.obs_scales.ang_vel,  # YXC: roll and pitch
                 self.base_ang_vel * self.obs_scales.ang_vel,
                 self.commands[:, :3] * self.commands_scale,
-                self.dof_pos[:, [JointIdx.l_hip, JointIdx.r_hip]] * self.obs_scales.dof_pos,
-                self.dof_vel[:, [JointIdx.l_hip, JointIdx.r_hip]] * self.obs_scales.dof_vel,
-                self.dof_vel[:, [JointIdx.l_wheel, JointIdx.r_wheel]] * self.obs_scales.dof_vel,
+                self.dof_pos[:, [JointIdx.l_hip.value, JointIdx.r_hip.value]] * self.obs_scales.dof_pos,
+                self.dof_vel[:, [JointIdx.l_hip.value, JointIdx.r_hip.value]] * self.obs_scales.dof_vel,
+                self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]] * self.obs_scales.dof_vel,
                 self.actions
             ),
             dim=-1,
@@ -243,45 +247,45 @@ class MetaWLVMC(LeggedRobot):
         )
 
     def _compute_knee(self, hip):
-        # TODO: check zero point
+        hip_angle = hip + 1.3090  # 75 degrees
         l1 = self.cfg.asset.l1
         l2 = self.cfg.asset.l2
         l3 = self.cfg.asset.l3
         l4 = self.cfg.asset.l4
-        diagonal = l1 ** 2 + l2 ** 2 - 2 * l1 * l2 * torch.cos(hip)
+        diagonal = l1 ** 2 + l2 ** 2 - 2 * l1 * l2 * torch.cos(hip_angle)
         diagonal = torch.sqrt(diagonal)
         angle1 = torch.acos((l4 ** 2 + diagonal ** 2 - l3 ** 2) / (2 * l4 * diagonal))
         angle2 = torch.acos((l2 ** 2 + diagonal ** 2 - l1 ** 2) / (2 * l2 * diagonal))
-        return self.pi - angle1 - angle2
+        return self.pi - angle1 - angle2 - 1.4835  # 85 degrees
 
     # action: [l_leg_pos, r_leg_pos, l_wheel_vel, r_wheel_vel]
     def _compute_torques(self, actions):
         # YXC: hip uses position PD control according to the action
         hip_goal_pos = torch.cat(
             (
-                actions[:, ActionIdx.l_leg].unsqueeze(1),
-                actions[:, ActionIdx.r_leg].unsqueeze(1),
+                actions[:, ActionIdx.l_leg.value].unsqueeze(1),
+                actions[:, ActionIdx.r_leg.value].unsqueeze(1),
             ), axis=1,
         ) * self.cfg.control.action_scale_pos
 
-        hip_j = [JointIdx.l_hip, JointIdx.r_hip]
+        hip_j = [JointIdx.l_hip.value, JointIdx.r_hip.value]
         hip_torques = (self.p_gains[:, hip_j] * (hip_goal_pos - self.dof_pos[:, hip_j])
                        - self.d_gains[:, hip_j] * self.dof_vel[:, hip_j])
 
         # YXC: knee uses position PD control according to hip position
         knee_goal_pos = self._compute_knee(hip_goal_pos)
-        knee_j = [JointIdx.l_knee, JointIdx.r_knee]
+        knee_j = [JointIdx.l_knee.value, JointIdx.r_knee.value]
         knee_torques = (self.p_gains[:, knee_j] * (knee_goal_pos - self.dof_pos[:, knee_j])
                         - self.d_gains[:, knee_j] * self.dof_vel[:, knee_j])
 
         # YXC: wheel uses velocity PD control according to the action
         wheel_goal_vel = torch.cat(
             (
-                actions[:, ActionIdx.l_wheel].unsqueeze(1),
-                actions[:, ActionIdx.r_wheel].unsqueeze(1),
+                actions[:, ActionIdx.l_wheel.value].unsqueeze(1),
+                actions[:, ActionIdx.r_wheel.value].unsqueeze(1),
             ), axis=1,
         ) * self.cfg.control.action_scale_vel
-        wheel_j = [JointIdx.l_wheel, JointIdx.r_wheel]
+        wheel_j = [JointIdx.l_wheel.value, JointIdx.r_wheel.value]
         wheel_torques = (self.p_gains[:, wheel_j] * (wheel_goal_vel - self.dof_vel[:, wheel_j])
                          - self.d_gains[:, wheel_j] * (
                                  self.dof_vel[:, wheel_j] - self.last_dof_vel[:, wheel_j]) / self.sim_params.dt)
@@ -290,7 +294,10 @@ class MetaWLVMC(LeggedRobot):
         torque[:, hip_j] = hip_torques
         torque[:, knee_j] = knee_torques
         torque[:, wheel_j] = wheel_torques
-        return torque
+
+        return torch.clip(
+            torque * self.torques_scale, -self.torque_limits, self.torque_limits
+        )
 
     def _get_noise_scale_vec(self, cfg):
         noise_vec = torch.zeros_like(self.obs_buf[0])
@@ -330,7 +337,7 @@ class MetaWLVMC(LeggedRobot):
         self.dof_vel = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 1]
         self.dof_acc = torch.zeros_like(self.dof_vel)
         self.base_quat = self.root_states[:, 3:7]
-        self.base_euler_angle = get_euler_xyz(self.base_quat)
+        self.base_euler_angle = torch.stack(get_euler_xyz(self.base_quat), dim=-1)
 
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(
             self.num_envs, -1, 3
@@ -465,6 +472,7 @@ class MetaWLVMC(LeggedRobot):
         self.rigid_body_external_torques = torch.zeros(
             (self.num_envs, self.num_bodies, 3), device=self.device, requires_grad=False
         )
+        self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
         self.action_delay_idx = torch.zeros(
             self.num_envs,
             dtype=torch.long,
@@ -570,3 +578,7 @@ class MetaWLVMC(LeggedRobot):
                 )
             ).squeeze(-1)
             self.action_delay_idx = action_delay_idx.long()
+
+    def _reward_nominal_state(self):
+        # YXC: overwrite _reward_nominal_state() in LeggedRobot which depends on theta0
+        return torch.zeros(self.num_envs, device=self.device)
