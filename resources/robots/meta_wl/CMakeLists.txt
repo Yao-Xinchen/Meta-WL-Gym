@@ -1,14 +1,7 @@
-cmake_minimum_required(VERSION 2.8.3)
-
+cmake_minimum_required(VERSION 3.10.2)
 project(meta_wl)
+find_package(ament_cmake REQUIRED)
 
-find_package(catkin REQUIRED)
+ament_package()
 
-catkin_package()
-
-find_package(roslaunch)
-
-foreach(dir config launch meshes urdf)
-	install(DIRECTORY ${dir}/
-		DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/${dir})
-endforeach(dir)
+install(DIRECTORY meshes urdf DESTINATION share/${PROJECT_NAME})
