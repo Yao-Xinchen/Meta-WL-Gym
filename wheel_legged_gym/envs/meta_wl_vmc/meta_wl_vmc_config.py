@@ -28,8 +28,9 @@ class MetaWLVMCCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         num_envs = 2048
         num_observations = 18  # YXC: defined in _compute_proprioception_observations()
-        num_privileged_obs = num_observations + 7 * 11 + 3 + 6 * 7 + 3 + 3
+        num_privileged_obs = 142
         num_actions = len(ActionIdx)  # YXC: 4
+        # YXC: remember to update policy accordingly
 
     class asset(LeggedRobotCfg.asset):
         file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl.urdf"
@@ -71,6 +72,19 @@ class MetaWLVMCCfg(LeggedRobotCfg):
 
 
 class MetaWLVMCCfgPPO(LeggedRobotCfgPPO):
+    class policy:
+        init_noise_std = 0.5
+        actor_hidden_dims = [128, 64, 32]
+        critic_hidden_dims = [256, 128, 64]
+        activation = "elu"  # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
+
+        # only for ActorCriticSequence
+        num_encoder_obs = (
+                MetaWLVMCCfg.env.obs_history_length * MetaWLVMCCfg.env.num_observations
+        )
+        latent_dim = 3  # at least 3 to estimate base linear velocity
+        encoder_hidden_dims = [128, 64]
+
     class algorithm(LeggedRobotCfgPPO.algorithm):
         kl_decay = (
                            LeggedRobotCfgPPO.algorithm.desired_kl - 0.002
