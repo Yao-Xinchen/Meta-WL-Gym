@@ -256,7 +256,7 @@ class MetaWLVMC(LeggedRobot):
         diagonal = torch.sqrt(diagonal)
         angle1 = torch.acos((l4 ** 2 + diagonal ** 2 - l3 ** 2) / (2 * l4 * diagonal))
         angle2 = torch.acos((l2 ** 2 + diagonal ** 2 - l1 ** 2) / (2 * l2 * diagonal))
-        return self.pi - angle1 - angle2 - 1.4835  # 85 degrees
+        return angle1 + angle2 - 1.6515
 
     # action: [l_leg_pos, r_leg_pos, l_wheel_vel, r_wheel_vel]
     def _compute_torques(self, actions):
