@@ -52,8 +52,6 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         action_scale_pos = 0.5
         action_scale_vel = 10.0
 
-        feedforward_force = 40.0  # [N]
-
         # PD Drive parameters:
         stiffness = {"hip": 100.0, "knee": 100.0, "wheel": 0}  # [N*m/rad]
         damping = {"hip": 1.0, "knee": 1.0, "wheel": 0.5}  # [N*m*s/rad]

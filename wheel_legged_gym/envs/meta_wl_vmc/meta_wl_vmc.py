@@ -19,20 +19,6 @@ from wheel_legged_gym.utils.math import (
 from .meta_wl_vmc_config import MetaWLVMCCfg, ActionIdx, JointIdx
 
 
-def quat_to_euler(quaternion):
-    w, x, y, z = quaternion[..., 0], quaternion[..., 1], quaternion[..., 2], quaternion[..., 3]
-    t0 = +2.0 * (w * x + y * z)
-    t1 = +1.0 - 2.0 * (x ** 2 + y ** 2)
-    roll_x = torch.atan2(t0, t1)
-    t2 = +2.0 * (w * y - z * x)
-    t2 = torch.clamp(t2, -1.0, 1.0)
-    pitch_y = torch.asin(t2)
-    t3 = +2.0 * (w * z + x * y)
-    t4 = +1.0 - 2.0 * (y ** 2 + z ** 2)
-    yaw_z = torch.atan2(t3, t4)
-    return torch.stack([roll_x, pitch_y, yaw_z], dim=-1)
-
-
 class MetaWLVMC(LeggedRobot):
     def __init__(
             self, cfg: MetaWLVMCCfg, sim_params, physics_engine, sim_device, headless
@@ -91,7 +77,7 @@ class MetaWLVMC(LeggedRobot):
 
         # prepare quantities
         self.base_quat[:] = self.root_states[:, 3:7]
-        self.base_euler_angle = quat_to_euler(self.base_quat)
+        self.base_euler_angle = get_euler_xyz(self.base_quat)
         # self.base_lin_vel = (self.base_position - self.last_base_position) / self.dt
         # self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.base_lin_vel)
         self.base_lin_vel = quat_rotate_inverse(
@@ -235,7 +221,7 @@ class MetaWLVMC(LeggedRobot):
                     self.last_actions[:, :, 0],
                     self.last_actions[:, :, 1],
                     self.dof_acc * self.obs_scales.dof_acc,
-                    self.dof_pos * self.obs_scales.dof_pos,
+                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                     self.dof_vel * self.obs_scales.dof_vel,
                     heights,
                     self.torques * self.obs_scales.torque,
@@ -257,6 +243,7 @@ class MetaWLVMC(LeggedRobot):
         )
 
     def _compute_knee(self, hip):
+        # TODO: check zero point
         l1 = self.cfg.asset.l1
         l2 = self.cfg.asset.l2
         l3 = self.cfg.asset.l3
@@ -267,6 +254,7 @@ class MetaWLVMC(LeggedRobot):
         angle2 = torch.acos((l2 ** 2 + diagonal ** 2 - l1 ** 2) / (2 * l2 * diagonal))
         return self.pi - angle1 - angle2
 
+    # action: [l_leg_pos, r_leg_pos, l_wheel_vel, r_wheel_vel]
     def _compute_torques(self, actions):
         # YXC: hip uses position PD control according to the action
         hip_goal_pos = torch.cat(
@@ -342,7 +330,7 @@ class MetaWLVMC(LeggedRobot):
         self.dof_vel = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 1]
         self.dof_acc = torch.zeros_like(self.dof_vel)
         self.base_quat = self.root_states[:, 3:7]
-        self.base_euler_angle = quat_to_euler(self.base_quat)
+        self.base_euler_angle = get_euler_xyz(self.base_quat)
 
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(
             self.num_envs, -1, 3
@@ -467,7 +455,7 @@ class MetaWLVMC(LeggedRobot):
         self.base_lin_vel = quat_rotate_inverse(
             self.base_quat, self.root_states[:, 7:10]
         )  # YXC: base linear velocity relative to its orientation
-        self.base_ang_vel = self.root_states[:, 10:13]
+        self.base_ang_vel = self.root_states[:, 10:13]  # YXC: no need to rotate
         # self.base_ang_vel = quat_rotate_inverse(
         #     self.base_quat, self.root_states[:, 10:13]
         # )
@@ -500,7 +488,6 @@ class MetaWLVMC(LeggedRobot):
         )
 
         # joint positions offsets and PD gains
-        # TODO: check defaults
         self.raw_default_dof_pos = torch.zeros(
             self.num_dof,
             dtype=torch.float,
