@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="meta_wl">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-0.0101402046938465 -0.0190713877211327 0.117667467469389"
+        rpy="0 0 0" />
+      <mass
+        value="1.51004053175102" />
+      <inertia
+        ixx="0.00229241448610905"
+        ixy="0.000348685044630327"
+        ixz="2.56851837831817E-06"
+        iyy="0.00338457045979008"
+        iyz="-2.73780790901979E-06"
+        izz="0.00367231955902952" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="l_upper">
+    <inertial>
+      <origin
+        xyz="0.0671852310993694 -9.82982039372916E-14 0.0025000000000049"
+        rpy="0 0 0" />
+      <mass
+        value="0.032226200550069" />
+      <inertia
+        ixx="3.66380053940648E-06"
+        ixy="1.19428469189304E-16"
+        ixz="6.62119708292851E-22"
+        iyy="8.52804972965807E-05"
+        iyz="8.39343311752535E-22"
+        izz="8.88118443695379E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/l_upper.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/l_upper.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="l_hip"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 -2.3924" />
+    <parent
+      link="base_link" />
+    <child
+      link="l_upper" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="l_lower">
+    <inertial>
+      <origin
+        xyz="0.0826713981672684 2.95569124730832E-13 -0.00258453281532065"
+        rpy="0 0 0" />
+      <mass
+        value="0.104306167055054" />
+      <inertia
+        ixx="2.53171746417589E-05"
+        ixy="-6.04730702362735E-16"
+        ixz="-2.33685736608165E-19"
+        iyy="0.00025923053976782"
+        iyz="-1.42684967797404E-21"
+        izz="0.000283258559261188" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/l_lower.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 0.25" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/l_lower.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="l_knee"
+    type="revolute">
+    <origin
+      xyz="0.1566 0 0.00125"
+      rpy="0 0 1.9355" />
+    <parent
+      link="l_upper" />
+    <child
+      link="l_lower" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="l_foot">
+    <inertial>
+      <origin
+        xyz="-3.6111307139524E-06 1.20885811504545E-05 0.0138462160537166"
+        rpy="0 0 0" />
+      <mass
+        value="0.394892486943145" />
+      <inertia
+        ixx="0.000484066650873149"
+        ixy="-1.72152636629852E-08"
+        ixz="-7.82184689139228E-10"
+        iyy="0.000484067714601926"
+        iyz="-9.41909288736776E-09"
+        izz="0.000850708988315163" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/l_foot.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/l_foot.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="l_wheel"
+    type="revolute">
+    <origin
+      xyz="0.1425 0 -0.0508"
+      rpy="0 0 0.45687" />
+    <parent
+      link="l_lower" />
+    <child
+      link="l_foot" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="r_upper">
+    <inertial>
+      <origin
+        xyz="0.0671852310993692 -9.83088796941645E-14 -0.00249999999998135"
+        rpy="0 0 0" />
+      <mass
+        value="0.032226200550069" />
+      <inertia
+        ixx="3.66380053940647E-06"
+        ixy="1.19444351057065E-16"
+        ixz="9.62383901001866E-22"
+        iyy="8.52804972965805E-05"
+        iyz="-1.82234974120561E-22"
+        izz="8.88118443695377E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/r_upper.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/r_upper.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="r_hip"
+    type="revolute">
+    <origin
+      xyz="0 0 0.242"
+      rpy="0 0 -2.3924" />
+    <parent
+      link="base_link" />
+    <child
+      link="r_upper" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="r_lower">
+    <inertial>
+      <origin
+        xyz="0.0826713981672686 7.77988784506078E-14 0.00258453281534418"
+        rpy="0 0 0" />
+      <mass
+        value="0.104306167055055" />
+      <inertia
+        ixx="2.53171746417591E-05"
+        ixy="1.12197984193305E-17"
+        ixz="2.31857648660975E-19"
+        iyy="0.000259230539767821"
+        iyz="1.17347330680165E-21"
+        izz="0.000283258559261189" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/r_lower.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 0.25" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/r_lower.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="r_knee"
+    type="revolute">
+    <origin
+      xyz="0.1566 0 -0.00125"
+      rpy="0 0 1.9355" />
+    <parent
+      link="r_upper" />
+    <child
+      link="r_lower" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="r_foot">
+    <inertial>
+      <origin
+        xyz="-4.62452943762043E-07 1.05265717411374E-05 -0.0138462160537167"
+        rpy="0 0 0" />
+      <mass
+        value="0.394892486943146" />
+      <inertia
+        ixx="0.000484056117024219"
+        ixy="-2.52194216741169E-08"
+        ixz="7.02643501003512E-09"
+        iyy="0.000484078248450858"
+        iyz="6.3214187320017E-09"
+        izz="0.000850708988315164" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/r_foot.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meta_wl/meshes/r_foot.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="r_wheel"
+    type="revolute">
+    <origin
+      xyz="0.1425 0 0.0508"
+      rpy="0 0 0.45687" />
+    <parent
+      link="r_lower" />
+    <child
+      link="r_foot" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+</robot>
