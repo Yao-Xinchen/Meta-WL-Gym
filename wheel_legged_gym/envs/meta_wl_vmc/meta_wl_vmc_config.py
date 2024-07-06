@@ -28,11 +28,11 @@ class MetaWLVMCCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         num_envs = 2048
         num_observations = 18  # YXC: defined in _compute_proprioception_observations()
-        num_privileged_obs = num_observations + 7 * 11 + 3 + 6 * 5 + 3 + 3
+        num_privileged_obs = num_observations + 7 * 11 + 3 + 6 * 7 + 3 + 3
         num_actions = len(ActionIdx)  # YXC: 4
 
     class asset(LeggedRobotCfg.asset):
-        file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl_vmc.urdf"
+        file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl.urdf"
         name = "MetaWL"
         penalize_contacts_on = ["upper", "lower", "base"]
         terminate_after_contacts_on = ["base"]
