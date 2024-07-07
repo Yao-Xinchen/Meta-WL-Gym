@@ -28,7 +28,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         num_envs = 1024
         num_observations = 18  # YXC: defined in _compute_proprioception_observations()
-        num_privileged_obs = 142
+        num_privileged_obs = 142 - 6
         num_actions = len(ActionIdx)  # YXC: 4
         # YXC: remember to update policy accordingly
 
@@ -49,12 +49,8 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         l5 = 0.180 - l4  # output link extension
 
     class control(LeggedRobotCfg.control):
-        action_scale_pos = 0.5
+        action_scale_pos = 0.2
         action_scale_vel = 10.0
-
-        # PD Drive parameters:
-        stiffness = {"hip": 100.0, "knee": 100.0, "wheel": 0}  # [N*m/rad]
-        damping = {"hip": 1.0, "knee": 1.0, "wheel": 0.5}  # [N*m*s/rad]
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.75]  # x,y,z [m]
@@ -68,6 +64,33 @@ class MetaWLVMCCfg(LeggedRobotCfg):
             "r_knee": init_knee,
             "r_wheel": 0.0,
         }
+
+    class domain_rand:
+        randomize_friction = True
+        friction_range = [0.1, 2.0]
+        randomize_restitution = True
+        restitution_range = [0.0, 1.0]
+        randomize_base_mass = True
+        added_mass_range = [-2.0, 3.0]
+        randomize_inertia = True
+        randomize_inertia_range = [0.8, 1.2]
+        randomize_base_com = True
+        rand_com_vec = [0.05, 0.05, 0.05]
+        push_robots = True
+        push_interval_s = 7
+        max_push_vel_xy = 2.0
+        randomize_Kp = True
+        randomize_Kp_range = [0.9, 1.1]
+        randomize_Kd = True
+        randomize_Kd_range = [0.9, 1.1]
+        # randomize_motor_torque = True
+        # randomize_motor_torque_range = [0.9, 1.1]
+        randomize_motor_velocity = True
+        randomize_motor_velocity_range = [0.9, 1.1]
+        randomize_default_dof_pos = True
+        randomize_default_dof_pos_range = [-0.05, 0.05]
+        randomize_action_delay = True
+        delay_ms_range = [0, 10]
 
 
 class MetaWLVMCCfgPPO(LeggedRobotCfgPPO):

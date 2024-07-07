@@ -36,11 +36,17 @@ class MetaWLVMC(LeggedRobot):
             self.action_fifo = torch.cat(
                 (self.actions.unsqueeze(1), self.action_fifo[:, :-1, :]), dim=1
             )
-            self.torques = self._compute_torques(
+            # self.torques = self._compute_torques(
+            #     self.action_fifo[torch.arange(self.num_envs), self.action_delay_idx, :]
+            # )
+            # self.gym.set_dof_actuation_force_tensor(
+            #     self.sim, gymtorch.unwrap_tensor(self.torques)
+            # )
+            self.velocities = self._compute_velocities(
                 self.action_fifo[torch.arange(self.num_envs), self.action_delay_idx, :]
             )
-            self.gym.set_dof_actuation_force_tensor(
-                self.sim, gymtorch.unwrap_tensor(self.torques)
+            self.gym.set_dof_velocity_target_tensor(
+                self.sim, gymtorch.unwrap_tensor(self.velocities)
             )
             if self.cfg.domain_rand.push_robots:
                 self._push_robots()
@@ -228,7 +234,7 @@ class MetaWLVMC(LeggedRobot):
                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                     self.dof_vel * self.obs_scales.dof_vel,
                     heights,
-                    self.torques * self.obs_scales.torque,
+                    # self.torques * self.obs_scales.torque,
                     (self.base_mass - self.base_mass.mean()).view(self.num_envs, 1),
                     self.base_com,
                     self.default_dof_pos - self.raw_default_dof_pos,
@@ -246,9 +252,9 @@ class MetaWLVMC(LeggedRobot):
             (self.obs_history[:, self.num_obs:], self.obs_buf), dim=-1
         )
 
-    def _compute_knee(self, hip):
-        hip = torch.clip(hip, -0.6, 0.4)
-        hip_angle = hip + 1.3090  # 75 degrees
+    def _compute_knee_pos(self, hip_pos):
+        hip_pos = torch.clip(hip_pos, -0.6, 0.4)
+        hip_angle = hip_pos + 1.3090  # 75 degrees
         l1 = self.cfg.asset.l1
         l2 = self.cfg.asset.l2
         l3 = self.cfg.asset.l3
@@ -259,46 +265,35 @@ class MetaWLVMC(LeggedRobot):
         angle2 = torch.acos((l2 ** 2 + diagonal ** 2 - l1 ** 2) / (2 * l2 * diagonal))
         return angle1 + angle2 - 1.6515
 
-    # action: [l_leg_pos, r_leg_pos, l_wheel_vel, r_wheel_vel]
-    def _compute_torques(self, actions):
-        # YXC: hip uses position PD control according to the action
-        hip_goal_pos = torch.cat(
-            (
-                actions[:, ActionIdx.l_leg.value].unsqueeze(1),
-                actions[:, ActionIdx.r_leg.value].unsqueeze(1),
-            ), axis=1,
-        ) * self.cfg.control.action_scale_pos
+    def _compute_knee_vel(self, hip_vel, hip_pos):
+        dt = 0.001
+        d_hip_pos = self._compute_knee_pos(hip_pos + hip_vel * dt) - self._compute_knee_pos(hip_pos)
+        return d_hip_pos / dt
 
-        hip_j = [JointIdx.l_hip.value, JointIdx.r_hip.value]
-        hip_torques = (self.p_gains[:, hip_j] * (hip_goal_pos - self.dof_pos[:, hip_j])
-                       - self.d_gains[:, hip_j] * self.dof_vel[:, hip_j])
+    def adjust_hip_velocity(self, hip_v, hip_pos):
+        # set hip_v to 0 if (hip_pos > 0.4 and hip_v > 0) or (hip_pos < -0.6 and hip_v < 0)
+        condition = ((hip_pos > 0.4) & (hip_v > 0)) | ((hip_pos < -0.6) & (hip_v < 0))
+        adjusted_hip_v = torch.where(condition, torch.zeros_like(hip_v), hip_v)
+        return adjusted_hip_v
 
-        # YXC: knee uses position PD control according to hip position
-        knee_goal_pos = self._compute_knee(hip_goal_pos)
-        knee_j = [JointIdx.l_knee.value, JointIdx.r_knee.value]
-        knee_torques = (self.p_gains[:, knee_j] * (knee_goal_pos - self.dof_pos[:, knee_j])
-                        - self.d_gains[:, knee_j] * self.dof_vel[:, knee_j])
+    # YXC: action: [l_leg_vel, r_leg_vel, l_wheel_vel, r_wheel_vel]
+    def _compute_velocities(self, actions):
+        l_hip_pos = self.dof_pos[:, JointIdx.l_hip.value].unsqueeze(1)
+        r_hip_pos = self.dof_pos[:, JointIdx.r_hip.value].unsqueeze(1)
 
-        # YXC: wheel uses velocity PD control according to the action
-        wheel_goal_vel = torch.cat(
-            (
-                actions[:, ActionIdx.l_wheel.value].unsqueeze(1),
-                actions[:, ActionIdx.r_wheel.value].unsqueeze(1),
-            ), axis=1,
-        ) * self.cfg.control.action_scale_vel
-        wheel_j = [JointIdx.l_wheel.value, JointIdx.r_wheel.value]
-        wheel_torques = (self.p_gains[:, wheel_j] * (wheel_goal_vel - self.dof_vel[:, wheel_j])
-                         - self.d_gains[:, wheel_j] * (
-                                 self.dof_vel[:, wheel_j] - self.last_dof_vel[:, wheel_j]) / self.sim_params.dt)
+        l_hip_v = actions[:, ActionIdx.l_leg.value].unsqueeze(1)
+        l_hip_v = self.adjust_hip_velocity(l_hip_v, l_hip_pos)
+        r_hip_v = actions[:, ActionIdx.r_leg.value].unsqueeze(1)
+        r_hip_v = self.adjust_hip_velocity(r_hip_v, r_hip_pos)
 
-        torque = torch.zeros((self.num_envs, self.num_dof), device=self.device)
-        torque[:, hip_j] = hip_torques
-        torque[:, knee_j] = knee_torques
-        torque[:, wheel_j] = wheel_torques
+        l_wheel_v = actions[:, ActionIdx.l_wheel.value].unsqueeze(1)
+        r_wheel_v = actions[:, ActionIdx.r_wheel.value].unsqueeze(1)
 
-        return torch.clip(
-            torque * self.torques_scale, -self.torque_limits, self.torque_limits
-        )
+        l_knee_v = self._compute_knee_vel(l_hip_v, l_hip_pos)
+        r_knee_v = self._compute_knee_vel(r_hip_v, r_hip_pos)
+
+        velocities = torch.cat((l_hip_v, l_knee_v, l_wheel_v, r_hip_v, r_knee_v, r_wheel_v), dim=1)
+        return velocities * self.velocities_scale * self.cfg.control.action_scale_vel
 
     def _get_noise_scale_vec(self, cfg):
         noise_vec = torch.zeros_like(self.obs_buf[0])
@@ -354,14 +349,28 @@ class MetaWLVMC(LeggedRobot):
         self.forward_vec = to_torch([1.0, 0.0, 0.0], device=self.device).repeat(
             (self.num_envs, 1)
         )
-        self.torques = torch.zeros(
+        # self.torques = torch.zeros(
+        #     self.num_envs,
+        #     self.num_actions,
+        #     dtype=torch.float,
+        #     device=self.device,
+        #     requires_grad=False,
+        # )
+        self.velocities = torch.zeros(
             self.num_envs,
             self.num_actions,
             dtype=torch.float,
             device=self.device,
             requires_grad=False,
         )
-        self.torques_scale = torch.ones(
+        # self.torques_scale = torch.ones(
+        #     self.num_envs,
+        #     self.num_dof,
+        #     dtype=torch.float,
+        #     device=self.device,
+        #     requires_grad=False,
+        # )
+        self.velocities_scale = torch.ones(
             self.num_envs,
             self.num_dof,
             dtype=torch.float,
@@ -551,15 +560,26 @@ class MetaWLVMC(LeggedRobot):
                 self.d_gains.shape,
                 device=self.device,
             )
-        if self.cfg.domain_rand.randomize_motor_torque:
+        # if self.cfg.domain_rand.randomize_motor_torque:
+        # (
+        #     torque_scale_min,
+        #     torque_scale_max,
+        # ) = self.cfg.domain_rand.randomize_motor_torque_range
+        # self.torques_scale *= torch_rand_float(
+        #     torque_scale_min,
+        #     torque_scale_max,
+        #     self.torques_scale.shape,
+        #     device=self.device,
+        # )
+        if self.cfg.domain_rand.randomize_motor_velocity:
             (
-                torque_scale_min,
-                torque_scale_max,
-            ) = self.cfg.domain_rand.randomize_motor_torque_range
-            self.torques_scale *= torch_rand_float(
-                torque_scale_min,
-                torque_scale_max,
-                self.torques_scale.shape,
+                velocity_scale_min,
+                velocity_scale_max,
+            ) = self.cfg.domain_rand.randomize_motor_velocity_range
+            self.velocities_scale *= torch_rand_float(
+                velocity_scale_min,
+                velocity_scale_max,
+                self.velocities_scale.shape,
                 device=self.device,
             )
         if self.cfg.domain_rand.randomize_default_dof_pos:
@@ -582,4 +602,11 @@ class MetaWLVMC(LeggedRobot):
 
     def _reward_nominal_state(self):
         # YXC: overwrite _reward_nominal_state() in LeggedRobot which depends on theta0
+        return torch.zeros(self.num_envs, device=self.device)
+
+    def _reward_torques(self):
+        # YXC: TODO: use torques in dof_state
+        return torch.zeros(self.num_envs, device=self.device)
+
+    def _reward_power(self):
         return torch.zeros(self.num_envs, device=self.device)
