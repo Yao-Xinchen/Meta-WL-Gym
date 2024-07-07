@@ -5,7 +5,7 @@
 <robot
   name="meta_wl">
   <link
-    name="base_link">
+    name="base">
     <inertial>
       <origin
         xyz="-0.112735140329824 -0.0183723185813253 -0.00945159251618769"
@@ -26,7 +26,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/base_link.STL" />
+          filename="../meshes/base.STL" />
       </geometry>
       <material
         name="">
@@ -40,12 +40,12 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/base_link.STL" />
+          filename="../meshes/base.STL" />
       </geometry>
     </collision>
   </link>
   <link
-    name="l_upper">
+    name="l_thigh">
     <inertial>
       <origin
         xyz="0.0671852310993694 1.72114374890327E-18 0.00249999999999975"
@@ -66,7 +66,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/l_upper.STL" />
+          filename="../meshes/l_thigh.STL" />
       </geometry>
       <material
         name="">
@@ -80,7 +80,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/l_upper.STL" />
+          filename="../meshes/l_thigh.STL" />
       </geometry>
     </collision>
   </link>
@@ -91,19 +91,21 @@
       xyz="0.005 0 0"
       rpy="-1.5708 0.89586 1.5708" />
     <parent
-      link="base_link" />
+      link="base" />
     <child
-      link="l_upper" />
+      link="l_thigh" />
     <axis
       xyz="0 0 1" />
+    <dynamics damping="0"
+      friction="0"/>
     <limit
       lower="-0.436"
       upper="0.262"
-      effort="0"
-      velocity="0" />
+      effort="30"
+      velocity="1000" />
   </joint>
   <link
-    name="l_lower">
+    name="l_shin">
     <inertial>
       <origin
         xyz="0.10506997415943 7.63611994727964E-06 0.00562049568608449"
@@ -124,7 +126,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/l_lower.STL" />
+          filename="../meshes/l_shin.STL" />
       </geometry>
       <material
         name="">
@@ -138,7 +140,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/l_lower.STL" />
+          filename="../meshes/l_shin.STL" />
       </geometry>
     </collision>
   </link>
@@ -149,16 +151,18 @@
       xyz="0.1566 0 0.00125"
       rpy="0 0 1.6628" />
     <parent
-      link="l_upper" />
+      link="l_thigh" />
     <child
-      link="l_lower" />
+      link="l_shin" />
     <axis
       xyz="0 0 1" />
+    <dynamics damping="0"
+      friction="0"/>
     <limit
       lower="-0.53793"
       upper="0.83588"
-      effort="0"
-      velocity="0" />
+      effort="30"
+      velocity="1000" />
   </joint>
   <link
     name="l_foot">
@@ -207,19 +211,19 @@
       xyz="0.1425 0 -0.0508"
       rpy="0 0 0.58297" />
     <parent
-      link="l_lower" />
+      link="l_shin" />
     <child
       link="l_foot" />
     <axis
       xyz="0 0 1" />
+    <dynamics damping="0"
+      friction="0"/>
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      effort="5"
+      velocity="1000" />
   </joint>
   <link
-    name="r_upper">
+    name="r_thigh">
     <inertial>
       <origin
         xyz="0.0671852310993693 -3.00342681036336E-17 -0.00249999999999978"
@@ -240,7 +244,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/r_upper.STL" />
+          filename="../meshes/r_thigh.STL" />
       </geometry>
       <material
         name="">
@@ -254,7 +258,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/r_upper.STL" />
+          filename="../meshes/r_thigh.STL" />
       </geometry>
     </collision>
   </link>
@@ -265,19 +269,21 @@
       xyz="-0.237 0 0"
       rpy="-1.5708 0.89586 1.5708" />
     <parent
-      link="base_link" />
+      link="base" />
     <child
-      link="r_upper" />
+      link="r_thigh" />
     <axis
       xyz="0 0 1" />
+    <dynamics damping="0"
+      friction="0"/>
     <limit
       lower="-0.436"
       upper="0.262"
-      effort="0"
-      velocity="0" />
+      effort="30"
+      velocity="1000" />
   </joint>
   <link
-    name="r_lower">
+    name="r_shin">
     <inertial>
       <origin
         xyz="0.115164055925419 0.00102859006399245 -0.00774163353637308"
@@ -298,7 +304,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/r_lower.STL" />
+          filename="../meshes/r_shin.STL" />
       </geometry>
       <material
         name="">
@@ -312,7 +318,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="../meshes/r_lower.STL" />
+          filename="../meshes/r_shin.STL" />
       </geometry>
     </collision>
   </link>
@@ -323,16 +329,18 @@
       xyz="0.1566 0 -0.00125"
       rpy="0 0 1.6628" />
     <parent
-      link="r_upper" />
+      link="r_thigh" />
     <child
-      link="r_lower" />
+      link="r_shin" />
     <axis
       xyz="0 0 1" />
+    <dynamics damping="0"
+      friction="0"/>
     <limit
       lower="-0.53793"
       upper="0.83588"
-      effort="0"
-      velocity="0" />
+      effort="30"
+      velocity="1000" />
   </joint>
   <link
     name="r_foot">
@@ -381,15 +389,15 @@
       xyz="0.1425 0 0.0508"
       rpy="0 0 0.58297" />
     <parent
-      link="r_lower" />
+      link="r_shin" />
     <child
       link="r_foot" />
     <axis
       xyz="0 0 1" />
+    <dynamics damping="0"
+      friction="0"/>
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      effort="5"
+      velocity="1000" />
   </joint>
 </robot>

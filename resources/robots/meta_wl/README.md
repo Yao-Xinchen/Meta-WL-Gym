@@ -1,0 +1,1 @@
+remember to set dynamics in urdf, or the gym may fail to load the robot

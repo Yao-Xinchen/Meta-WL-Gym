@@ -26,7 +26,7 @@ class JointIdx(Enum):
 
 class MetaWLVMCCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
-        num_envs = 2048
+        num_envs = 1024
         num_observations = 18  # YXC: defined in _compute_proprioception_observations()
         num_privileged_obs = 142
         num_actions = len(ActionIdx)  # YXC: 4
@@ -34,14 +34,13 @@ class MetaWLVMCCfg(LeggedRobotCfg):
 
     class asset(LeggedRobotCfg.asset):
         file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl.urdf"
-        name = "MetaWL"
-        penalize_contacts_on = ["upper", "lower", "base"]
+        name = "meta_wl"
+        penalize_contacts_on = ["shin", "thigh", "base"]
         terminate_after_contacts_on = ["base"]
+        self_collisions = 1
+        flip_visual_attachments = False
 
         # YXC: make sure the following parameters are consistent with the URDF file
-        upper_len = 0.15
-        lower_len = 0.25
-
         # links
         l1 = 0.07  # fixed link
         l2 = 0.1566  # driving link
@@ -58,9 +57,9 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         damping = {"hip": 1.0, "knee": 1.0, "wheel": 0.5}  # [N*m*s/rad]
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.25]  # x,y,z [m]
-        init_hip = torch.pi / 4  # [rad]
-        init_knee = 0.45
+        pos = [0.0, 0.0, 0.75]  # x,y,z [m]
+        init_hip = 0
+        init_knee = 0
         default_joint_angles = {
             "l_hip": init_hip,
             "l_knee": init_knee,
@@ -72,6 +71,9 @@ class MetaWLVMCCfg(LeggedRobotCfg):
 
 
 class MetaWLVMCCfgPPO(LeggedRobotCfgPPO):
+    seed = 1
+    runner_class_name = "OnPolicyRunner"
+
     class policy:
         init_noise_std = 0.5
         actor_hidden_dims = [128, 64, 32]
@@ -93,3 +95,18 @@ class MetaWLVMCCfgPPO(LeggedRobotCfgPPO):
     class runner(LeggedRobotCfgPPO.runner):
         # logging
         experiment_name = "meta_wl_vmc"
+        policy_class_name = (
+            "ActorCriticSequence"  # could be ActorCritic, ActorCriticSequence
+        )
+        algorithm_class_name = "PPO"
+        num_steps_per_env = 48  # per iteration
+        max_iterations = 5000  # number of policy updates
+
+        # logging
+        save_interval = 100  # check for potential saves every this many iterations
+        run_name = ""
+        # load and resume
+        resume = False
+        load_run = -1  # -1 = last run
+        checkpoint = -1  # -1 = last saved model
+        resume_path = None  # updated from load_run and chkpt
