@@ -287,9 +287,7 @@ class MetaWLVMC(LeggedRobot):
             ), axis=1,
         ) * self.cfg.control.action_scale_vel
         wheel_j = [JointIdx.l_wheel.value, JointIdx.r_wheel.value]
-        wheel_torques = (self.p_gains[:, wheel_j] * (wheel_goal_vel - self.dof_vel[:, wheel_j])
-                         - self.d_gains[:, wheel_j] * (
-                                 self.dof_vel[:, wheel_j] - self.last_dof_vel[:, wheel_j]) / self.sim_params.dt)
+        wheel_torques = self.d_gains[:, wheel_j] * (wheel_goal_vel - self.dof_vel[:, wheel_j])
 
         torque = torch.zeros((self.num_envs, self.num_dof), device=self.device)
         torque[:, hip_j] = hip_torques

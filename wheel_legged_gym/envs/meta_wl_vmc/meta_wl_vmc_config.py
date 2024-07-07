@@ -32,6 +32,9 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         num_actions = len(ActionIdx)  # YXC: 4
         # YXC: remember to update policy accordingly
 
+    # class terrain(LeggedRobotCfg.terrain):
+    #     mesh_type = "plane"
+
     class asset(LeggedRobotCfg.asset):
         file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl.urdf"
         name = "meta_wl"
@@ -53,11 +56,11 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         action_scale_vel = 10.0
 
         # PD Drive parameters:
-        stiffness = {"hip": 100.0, "knee": 100.0, "wheel": 0}  # [N*m/rad]
-        damping = {"hip": 1.0, "knee": 1.0, "wheel": 0.5}  # [N*m*s/rad]
+        stiffness = {"hip": 3.0, "knee": 3.0, "wheel": 0}  # [N*m/rad]
+        damping = {"hip": 0.5, "knee": 0.5, "wheel": 0.2}  # [N*m*s/rad]
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.75]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.4]  # x,y,z [m]
         init_hip = 0
         init_knee = 0
         default_joint_angles = {
@@ -71,7 +74,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
 
 
 class MetaWLVMCCfgPPO(LeggedRobotCfgPPO):
-    seed = 1
+    seed = 10
     runner_class_name = "OnPolicyRunner"
 
     class policy:
