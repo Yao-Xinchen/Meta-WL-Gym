@@ -247,6 +247,7 @@ class MetaWLVMC(LeggedRobot):
         )
 
     def _compute_knee(self, hip):
+        hip = torch.clip(hip, -0.6, 0.4)
         hip_angle = hip + 1.3090  # 75 degrees
         l1 = self.cfg.asset.l1
         l2 = self.cfg.asset.l2
