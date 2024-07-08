@@ -36,9 +36,10 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl.urdf"
         name = "meta_wl"
         penalize_contacts_on = ["shin", "thigh", "base"]
-        terminate_after_contacts_on = ["base"]
-        self_collisions = 1
+        terminate_after_contacts_on = []
+        self_collisions = 0
         flip_visual_attachments = False
+        default_dof_drive_mode = 2  # see GymDofDriveModeFlags (0 is none, 1 is pos tgt, 2 is vel tgt, 3 effort)
 
         # YXC: make sure the following parameters are consistent with the URDF file
         # links
@@ -49,11 +50,12 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         l5 = 0.180 - l4  # output link extension
 
     class control(LeggedRobotCfg.control):
-        action_scale_pos = 0.2
-        action_scale_vel = 10.0
+        action_joint_scale = 2.0
+        action_wheel_scale = 30.0
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.75]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.25]  # x,y,z [m]
+        # rot = [-0.2, 0, 0, 0.96]  # quaternion [x,y,z,w]
         init_hip = 0
         init_knee = 0
         default_joint_angles = {

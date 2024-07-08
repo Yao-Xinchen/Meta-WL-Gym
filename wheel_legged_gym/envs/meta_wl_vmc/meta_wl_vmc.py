@@ -278,22 +278,29 @@ class MetaWLVMC(LeggedRobot):
 
     # YXC: action: [l_leg_vel, r_leg_vel, l_wheel_vel, r_wheel_vel]
     def _compute_velocities(self, actions):
-        l_hip_pos = self.dof_pos[:, JointIdx.l_hip.value].unsqueeze(1)
-        r_hip_pos = self.dof_pos[:, JointIdx.r_hip.value].unsqueeze(1)
+        j_scale = self.cfg.control.action_joint_scale
+        w_scale = self.cfg.control.action_wheel_scale
 
-        l_hip_v = actions[:, ActionIdx.l_leg.value].unsqueeze(1)
-        l_hip_v = self.adjust_hip_velocity(l_hip_v, l_hip_pos)
-        r_hip_v = actions[:, ActionIdx.r_leg.value].unsqueeze(1)
-        r_hip_v = self.adjust_hip_velocity(r_hip_v, r_hip_pos)
+        l_hip_p_fb = self.dof_pos[:, JointIdx.l_hip.value].unsqueeze(1)
+        r_hip_p_fb = self.dof_pos[:, JointIdx.r_hip.value].unsqueeze(1)
 
-        l_wheel_v = actions[:, ActionIdx.l_wheel.value].unsqueeze(1)
-        r_wheel_v = actions[:, ActionIdx.r_wheel.value].unsqueeze(1)
+        # YXC: set hip velocity
+        l_hip_v = actions[:, ActionIdx.l_leg.value].unsqueeze(1) * j_scale
+        l_hip_v = self.adjust_hip_velocity(l_hip_v, l_hip_p_fb)
+        r_hip_v = actions[:, ActionIdx.r_leg.value].unsqueeze(1) * j_scale
+        r_hip_v = self.adjust_hip_velocity(r_hip_v, r_hip_p_fb)
 
-        l_knee_v = self._compute_knee_vel(l_hip_v, l_hip_pos)
-        r_knee_v = self._compute_knee_vel(r_hip_v, r_hip_pos)
+        # YXC: set wheel velocity
+        l_wheel_v = actions[:, ActionIdx.l_wheel.value].unsqueeze(1) * w_scale
+        r_wheel_v = actions[:, ActionIdx.r_wheel.value].unsqueeze(1) * w_scale
+
+        l_hip_v_fb = self.dof_vel[:, JointIdx.l_hip.value].unsqueeze(1)
+        r_hip_v_fb = self.dof_vel[:, JointIdx.r_hip.value].unsqueeze(1)
+        l_knee_v = self._compute_knee_vel(l_hip_v_fb, l_hip_p_fb)
+        r_knee_v = self._compute_knee_vel(r_hip_v_fb, r_hip_p_fb)
 
         velocities = torch.cat((l_hip_v, l_knee_v, l_wheel_v, r_hip_v, r_knee_v, r_wheel_v), dim=1)
-        return velocities * self.velocities_scale * self.cfg.control.action_scale_vel
+        return velocities
 
     def _get_noise_scale_vec(self, cfg):
         noise_vec = torch.zeros_like(self.obs_buf[0])
