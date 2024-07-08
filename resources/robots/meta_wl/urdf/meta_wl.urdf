@@ -8,17 +8,17 @@
     name="base">
     <inertial>
       <origin
-        xyz="-0.112735140329824 -0.0183723185813253 -0.00945159251618769"
+        xyz="-27.027E-3 8.668E-3 51.737E-3"
         rpy="0 0 0" />
       <mass
-        value="3.385" />
+        value="3.422" />
       <inertia
-        ixx="12448E-6"
-        ixy="353E-6"
-        ixz="435E-6"
-        iyy="21786E-6"
-        iyz="-1868E-6"
-        izz="16127E-6" />
+        ixx="16516E-6"
+        ixy="408E-6"
+        ixz="-1864E-6"
+        iyy="12477E-6"
+        iyz="301E-6"
+        izz="22170E-6" />
     </inertial>
     <visual>
       <origin
@@ -48,17 +48,17 @@
     name="l_thigh">
     <inertial>
       <origin
-        xyz="0.0671852310993694 1.72114374890327E-18 0.00249999999999975"
+        xyz="0.0671852310993693 -8.35570846580197E-18 0.00250000000000011"
         rpy="0 0 0" />
       <mass
         value="0.0344820345885739" />
       <inertia
         ixx="3.92026657716492E-06"
-        ixy="2.11758236813575E-21"
-        ixz="7.98134345163021E-22"
+        ixy="1.03761536038652E-20"
+        ixz="6.56662359828351E-22"
         iyy="9.12501321073414E-05"
-        iyz="1.33270233661788E-21"
-        izz="9.50286734754056E-05" />
+        iyz="-9.73859650538212E-22"
+        izz="9.50286734754055E-05" />
     </inertial>
     <visual>
       <origin
@@ -88,37 +88,38 @@
     name="l_hip"
     type="revolute">
     <origin
-      xyz="0.005 0 0"
-      rpy="-1.5708 0.89586 1.5708" />
+      xyz="-0.02 0.121 0.066"
+      rpy="-1.5708 0.816 -3.1416" />
     <parent
       link="base" />
     <child
       link="l_thigh" />
     <axis
       xyz="0 0 1" />
-    <dynamics damping="0"
-      friction="0"/>
     <limit
       lower="-0.436"
       upper="0.262"
       effort="30"
       velocity="1000" />
+    <dynamics
+      damping="0"
+      friction="0" />
   </joint>
   <link
     name="l_shin">
     <inertial>
       <origin
-        xyz="0.10506997415943 7.63611994727964E-06 0.00562049568608449"
+        xyz="0.0649693737417057 6.79456491070596E-14 0.00124999999999971"
         rpy="0 0 0" />
       <mass
-        value="0.178077513203325" />
+        value="0.086125018064217" />
       <inertia
-        ixx="225E-6"
-        ixy="9.68E-6"
-        ixz="54.473E-6"
-        iyy="904.874E-6"
-        iyz="-2.69E-6"
-        izz="811.404E-6" />
+        ixx="1.84648350058641E-05"
+        ixy="-3.294720995594E-16"
+        ixz="-5.87349482843795E-20"
+        iyy="0.00026875213569075"
+        iyz="5.62290965943952E-21"
+        izz="0.000286858342492397" />
     </inertial>
     <visual>
       <origin
@@ -149,36 +150,37 @@
     type="revolute">
     <origin
       xyz="0.1566 0 0.00125"
-      rpy="0 0 1.6628" />
+      rpy="0 0 1.8118" />
     <parent
       link="l_thigh" />
     <child
       link="l_shin" />
     <axis
       xyz="0 0 1" />
-    <dynamics damping="0"
-      friction="0"/>
     <limit
-      lower="-0.53793"
-      upper="0.83588"
+      lower="-0.538"
+      upper="0.836"
       effort="30"
       velocity="1000" />
+    <dynamics
+      damping="0"
+      friction="0" />
   </joint>
   <link
     name="l_foot">
     <inertial>
       <origin
-        xyz="-7.95633722548705E-06 4.33734358770699E-06 0.0138462160537152"
+        xyz="-1.23949461805495E-13 -2.42861286636753E-14 0.0139999999999938"
         rpy="0 0 0" />
       <mass
-        value="0.422534961029166" />
+        value="0.363247599426668" />
       <inertia
-        ixx="0.000517981849196758"
-        ixy="2.54682819490607E-10"
-        ixz="-8.36937616408255E-10"
-        iyy="0.000517921921861573"
-        iyz="-1.00784293908614E-08"
-        izz="0.000910258617497224" />
+        ixx="0.000498536075854535"
+        ixy="4.79848234963671E-20"
+        ixz="-1.89973112526103E-19"
+        iyy="0.000498536075854535"
+        iyz="8.68147548945964E-19"
+        izz="0.000872747056357901" />
     </inertial>
     <visual>
       <origin
@@ -209,34 +211,35 @@
     type="revolute">
     <origin
       xyz="0.1425 0 -0.0508"
-      rpy="0 0 0.58297" />
+      rpy="0 0 0.51383" />
     <parent
       link="l_shin" />
     <child
       link="l_foot" />
     <axis
       xyz="0 0 1" />
-    <dynamics damping="0"
-      friction="0"/>
     <limit
       effort="5"
       velocity="1000" />
+    <dynamics
+      damping="0"
+      friction="0" />
   </joint>
   <link
     name="r_thigh">
     <inertial>
       <origin
-        xyz="0.0671852310993693 -3.00342681036336E-17 -0.00249999999999978"
+        xyz="0.0671852310993694 -4.03005402468748E-17 -0.00250000000000022"
         rpy="0 0 0" />
       <mass
-        value="0.0344820345885739" />
+        value="0.0344820345885738" />
       <inertia
         ixx="3.92026657716492E-06"
-        ixy="2.30816478126797E-20"
-        ixz="2.52872020236765E-21"
-        iyy="9.12501321073414E-05"
-        iyz="-5.06305924488066E-22"
-        izz="9.50286734754055E-05" />
+        ixy="-1.10537799616686E-19"
+        ixz="-3.11190307404087E-21"
+        iyy="9.12501321073411E-05"
+        iyz="8.44396102702677E-22"
+        izz="9.50286734754053E-05" />
     </inertial>
     <visual>
       <origin
@@ -266,37 +269,38 @@
     name="r_hip"
     type="revolute">
     <origin
-      xyz="-0.237 0 0"
-      rpy="-1.5708 0.89586 1.5708" />
+      xyz="-0.02 -0.121 0.066"
+      rpy="-1.5708 0.816 3.1416" />
     <parent
       link="base" />
     <child
       link="r_thigh" />
     <axis
       xyz="0 0 1" />
-    <dynamics damping="0"
-      friction="0"/>
     <limit
       lower="-0.436"
       upper="0.262"
       effort="30"
       velocity="1000" />
+    <dynamics
+      damping="0"
+      friction="0" />
   </joint>
   <link
     name="r_shin">
     <inertial>
       <origin
-        xyz="0.115164055925419 0.00102859006399245 -0.00774163353637308"
+        xyz="0.0649693737417057 -1.0325074129014E-13 -0.00124999999999983"
         rpy="0 0 0" />
       <mass
-        value="0.470" />
+        value="0.0861250180642172" />
       <inertia
-        ixx="225E-6"
-        ixy="9.68E-6"
-        ixz="54.473E-6"
-        iyy="904.874E-6"
-        iyz="-2.69E-6"
-        izz="811.404E-6" />
+        ixx="1.84648350058642E-05"
+        ixy="3.29651670544218E-16"
+        ixz="4.46729222348408E-20"
+        iyy="0.000268752135690751"
+        iyz="-4.77722496474428E-21"
+        izz="0.000286858342492398" />
     </inertial>
     <visual>
       <origin
@@ -327,36 +331,37 @@
     type="revolute">
     <origin
       xyz="0.1566 0 -0.00125"
-      rpy="0 0 1.6628" />
+      rpy="0 0 1.8118" />
     <parent
       link="r_thigh" />
     <child
       link="r_shin" />
     <axis
       xyz="0 0 1" />
-    <dynamics damping="0"
-      friction="0"/>
     <limit
-      lower="-0.53793"
-      upper="0.83588"
+      lower="-0.538"
+      upper="0.836"
       effort="30"
       velocity="1000" />
+    <dynamics
+      damping="0"
+      friction="0" />
   </joint>
   <link
     name="r_foot">
     <inertial>
       <origin
-        xyz="-4.80765945579109E-06 2.77533417913922E-06 -0.0138462160537151"
+        xyz="-1.21957999255073E-13 -1.61815005839117E-14 -0.0139999999999951"
         rpy="0 0 0" />
       <mass
-        value="0.422534961029166" />
+        value="0.363247599426668" />
       <inertia
-        ixx="0.000517970577978402"
-        ixy="-8.30976625242252E-09"
-        ixz="7.51828545974703E-09"
-        iyy="0.000517933193079929"
-        iyz="6.76391804461815E-09"
-        izz="0.000910258617497225" />
+        ixx="0.000498536075854535"
+        ixy="4.4283813060641E-20"
+        ixz="1.61352111169201E-19"
+        iyy="0.000498536075854535"
+        iyz="-8.67475637400023E-19"
+        izz="0.000872747056357902" />
     </inertial>
     <visual>
       <origin
@@ -387,17 +392,18 @@
     type="revolute">
     <origin
       xyz="0.1425 0 0.0508"
-      rpy="0 0 0.58297" />
+      rpy="0 0 0.51383" />
     <parent
       link="r_shin" />
     <child
       link="r_foot" />
     <axis
       xyz="0 0 1" />
-    <dynamics damping="0"
-      friction="0"/>
     <limit
       effort="5"
       velocity="1000" />
+    <dynamics
+      damping="0"
+      friction="0" />
   </joint>
 </robot>
