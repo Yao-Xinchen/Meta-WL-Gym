@@ -32,8 +32,8 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         num_actions = len(ActionIdx)  # YXC: 4
         # YXC: remember to update policy accordingly
 
-    # class terrain(LeggedRobotCfg.terrain):
-    #     mesh_type = "plane"
+    class terrain(LeggedRobotCfg.terrain):
+        mesh_type = "plane"
 
     class asset(LeggedRobotCfg.asset):
         file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl.urdf"
@@ -56,8 +56,11 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         action_scale_vel = 10.0
 
         # PD Drive parameters:
-        stiffness = {"hip": 5.0, "knee": 3.0, "wheel": 0}  # [N*m/rad]
-        damping = {"hip": 0.5, "knee": 0.5, "wheel": 0.2}  # [N*m*s/rad]
+        stiffness = {"hip": 2.0, "knee": 1.0, "wheel": 0}  # [N*m/rad]
+        damping = {"hip": 0.2, "knee": 0.2, "wheel": 0.2}  # [N*m*s/rad]
+
+        hip_feedforward = 0.5  # [N*m]
+        knee_feedforward = 0.5  # [N*m]
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.4]  # x,y,z [m]

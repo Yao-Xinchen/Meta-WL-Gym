@@ -272,12 +272,14 @@ class MetaWLVMC(LeggedRobot):
         hip_j = [JointIdx.l_hip.value, JointIdx.r_hip.value]
         hip_torques = (self.p_gains[:, hip_j] * (hip_goal_pos - self.dof_pos[:, hip_j])
                        - self.d_gains[:, hip_j] * self.dof_vel[:, hip_j])
+        hip_torques = hip_torques + self.cfg.control.hip_feedforward
 
         # YXC: knee uses position PD control according to hip position
         knee_goal_pos = self._compute_knee(hip_goal_pos)
         knee_j = [JointIdx.l_knee.value, JointIdx.r_knee.value]
         knee_torques = (self.p_gains[:, knee_j] * (knee_goal_pos - self.dof_pos[:, knee_j])
                         - self.d_gains[:, knee_j] * self.dof_vel[:, knee_j])
+        knee_torques = knee_torques + self.cfg.control.knee_feedforward
 
         # YXC: wheel uses velocity PD control according to the action
         wheel_goal_vel = torch.cat(
