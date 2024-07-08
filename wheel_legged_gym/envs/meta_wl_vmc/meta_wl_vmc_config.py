@@ -44,26 +44,40 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         flip_visual_attachments = False
 
         # YXC: make sure the following parameters are consistent with the URDF file
+        origin_to_hip = 0.022  # [m]
+        thigh_len = 0.157  # [m]
+        shin_len = 0.143  # [m]
+
         # links
         l1 = 0.07  # fixed link
-        l2 = 0.1566  # driving link
-        l3 = 0.1447  # follower link
+        l2 = thigh_len  # driving link
+        l3 = shin_len  # follower link
         l4 = 0.0375  # output link
         l5 = 0.180 - l4  # output link extension
 
+        hip_offset = 1.3090
+        knee_offset = 1.6515
+
+        theta_offset = 0.973
+        leg_offset = 0.25
+
     class control(LeggedRobotCfg.control):
-        action_scale_pos = 0.5
-        action_scale_vel = 10.0
+        action_scale_leg = 0.1
+        action_scale_wheel = 10.0
 
         # PD Drive parameters:
-        stiffness = {"hip": 2.0, "knee": 1.0, "wheel": 0}  # [N*m/rad]
-        damping = {"hip": 0.2, "knee": 0.2, "wheel": 0.2}  # [N*m*s/rad]
+        stiffness = {"hip": 5.0, "knee": 5.0, "wheel": 0}  # [N*m/rad]
+        damping = {"hip": 0.2, "knee": 0.2, "wheel": 0.3}  # [N*m*s/rad]
 
-        hip_feedforward = 0.5  # [N*m]
-        knee_feedforward = 0.5  # [N*m]
+        kp_leg = 0.0  # [N*m/rad]
+        kd_leg = 0.0  # [N*m*s/rad]
+        kp_theta = 0.5  # [N*m/rad]
+        kd_theta = 0.05  # [N*m*s/rad]
+
+        feedforward_force = 0.0  # [N]
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.4]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.6]  # x,y,z [m]
         init_hip = 0
         init_knee = 0
         default_joint_angles = {

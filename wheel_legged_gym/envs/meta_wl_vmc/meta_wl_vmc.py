@@ -32,6 +32,7 @@ class MetaWLVMC(LeggedRobot):
         self.render()
         self.pre_physics_step()
         for _ in range(self.cfg.control.decimation):
+            self.leg_post_physics_step()
             self.envs_steps_buf += 1
             self.action_fifo = torch.cat(
                 (self.actions.unsqueeze(1), self.action_fifo[:, :-1, :]), dim=1
@@ -110,6 +111,51 @@ class MetaWLVMC(LeggedRobot):
 
         if self.viewer and self.enable_viewer_sync and self.debug_viz:
             self._draw_debug_vis()
+
+    def leg_post_physics_step(self):
+        self.hip_pos = torch.cat(
+            (self.dof_pos[:, JointIdx.l_hip.value].unsqueeze(1),
+                self.dof_pos[:, JointIdx.r_hip.value].unsqueeze(1)),
+            dim=1
+        )
+        self.knee_pos = torch.cat(
+            (self.dof_pos[:, JointIdx.l_knee.value].unsqueeze(1),
+                self.dof_pos[:, JointIdx.r_knee.value].unsqueeze(1)),
+            dim=1
+        )
+        self.hip_vel = torch.cat(
+            (self.dof_vel[:, JointIdx.l_hip.value].unsqueeze(1),
+                self.dof_vel[:, JointIdx.r_hip.value].unsqueeze(1)),
+            dim=1
+        )
+        self.knee_vel = torch.cat(
+            (self.dof_vel[:, JointIdx.l_knee.value].unsqueeze(1),
+                self.dof_vel[:, JointIdx.r_knee.value].unsqueeze(1)),
+            dim=1
+        )
+
+        self.leg_pos, self.theta_pos = self._forward_kinematics(self.hip_pos, self.knee_pos)
+
+        temp_dt = 0.0001
+        leg_next, theta_next = self._forward_kinematics(
+            self.hip_pos + self.hip_vel * temp_dt,
+            self.knee_pos + self.knee_vel * temp_dt
+        )
+
+        self.leg_vel = (leg_next - self.leg_pos) / temp_dt
+        self.theta_vel = (theta_next - self.leg_pos) / temp_dt
+
+    def _forward_kinematics(self, hip_pos, knee_pos):
+        alpha = hip_pos + self.cfg.asset.hip_offset
+        beta = knee_pos + self.cfg.asset.knee_offset
+        end_x = (self.cfg.asset.origin_to_hip
+                 - self.cfg.asset.thigh_len * torch.cos(alpha)
+                 + self.cfg.asset.shin_len * torch.cos(torch.pi - beta - alpha))
+        end_y = (self.cfg.asset.thigh_len * torch.sin(alpha)
+                 + self.cfg.asset.shin_len * torch.sin(torch.pi - beta - alpha))
+        leg = torch.sqrt(end_x ** 2 + end_y ** 2)
+        theta = torch.atan2(end_y, end_x) - self.cfg.asset.theta_offset
+        return leg, theta
 
     def reset_idx(self, env_ids):
         """Reset some environments.
@@ -246,59 +292,68 @@ class MetaWLVMC(LeggedRobot):
             (self.obs_history[:, self.num_obs:], self.obs_buf), dim=-1
         )
 
-    def _compute_knee(self, hip):
-        hip = torch.clip(hip, -0.6, 0.4)
-        hip_angle = hip + 1.3090  # 75 degrees
-        l1 = self.cfg.asset.l1
-        l2 = self.cfg.asset.l2
-        l3 = self.cfg.asset.l3
-        l4 = self.cfg.asset.l4
-        diagonal = l1 ** 2 + l2 ** 2 - 2 * l1 * l2 * torch.cos(hip_angle)
-        diagonal = torch.sqrt(diagonal)
-        angle1 = torch.acos((l4 ** 2 + diagonal ** 2 - l3 ** 2) / (2 * l4 * diagonal))
-        angle2 = torch.acos((l2 ** 2 + diagonal ** 2 - l1 ** 2) / (2 * l2 * diagonal))
-        return angle1 + angle2 - 1.6515
-
     # action: [l_leg_pos, r_leg_pos, l_wheel_vel, r_wheel_vel]
     def _compute_torques(self, actions):
-        # YXC: hip uses position PD control according to the action
-        hip_goal_pos = torch.cat(
+        leg_ref = torch.cat(
             (
                 actions[:, ActionIdx.l_leg.value].unsqueeze(1),
                 actions[:, ActionIdx.r_leg.value].unsqueeze(1),
             ), axis=1,
-        ) * self.cfg.control.action_scale_pos
+        ) * self.cfg.control.action_scale_leg + self.cfg.asset.leg_offset
 
-        hip_j = [JointIdx.l_hip.value, JointIdx.r_hip.value]
-        hip_torques = (self.p_gains[:, hip_j] * (hip_goal_pos - self.dof_pos[:, hip_j])
-                       - self.d_gains[:, hip_j] * self.dof_vel[:, hip_j])
-        hip_torques = hip_torques + self.cfg.control.hip_feedforward
+        # YXC: set theta always to 0
+        theta_ref = torch.zeros_like(leg_ref)
 
-        # YXC: knee uses position PD control according to hip position
-        knee_goal_pos = self._compute_knee(hip_goal_pos)
-        knee_j = [JointIdx.l_knee.value, JointIdx.r_knee.value]
-        knee_torques = (self.p_gains[:, knee_j] * (knee_goal_pos - self.dof_pos[:, knee_j])
-                        - self.d_gains[:, knee_j] * self.dof_vel[:, knee_j])
-        knee_torques = knee_torques + self.cfg.control.knee_feedforward
-
-        # YXC: wheel uses velocity PD control according to the action
-        wheel_goal_vel = torch.cat(
+        wheel_ref = torch.cat(
             (
                 actions[:, ActionIdx.l_wheel.value].unsqueeze(1),
                 actions[:, ActionIdx.r_wheel.value].unsqueeze(1),
             ), axis=1,
-        ) * self.cfg.control.action_scale_vel
-        wheel_j = [JointIdx.l_wheel.value, JointIdx.r_wheel.value]
-        wheel_torques = self.d_gains[:, wheel_j] * (wheel_goal_vel - self.dof_vel[:, wheel_j])
+        ) * self.cfg.control.action_scale_wheel
 
-        torque = torch.zeros((self.num_envs, self.num_dof), device=self.device)
-        torque[:, hip_j] = hip_torques
-        torque[:, knee_j] = knee_torques
-        torque[:, wheel_j] = wheel_torques
+        self.force_leg = self.leg_kp * (leg_ref - self.leg_pos) - self.leg_kd * self.leg_vel
+        self.torque_leg = self.theta_kp * (theta_ref - self.theta_pos) - self.theta_kd * self.theta_vel
+        self.torque_wheel = self.d_gains[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]] * (
+                wheel_ref - self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]]
+        )
+
+        hip_torque, knee_torque = self._inverse_kinematics(
+            self.force_leg + self.cfg.control.feedforward_force, self.torque_leg
+        )
+
+        torques = torch.cat(
+            (
+                hip_torque[:, 0].unsqueeze(1),
+                knee_torque[:, 0].unsqueeze(1),
+                self.torque_wheel[:, 0].unsqueeze(1),
+                hip_torque[:, 1].unsqueeze(1),
+                knee_torque[:, 1].unsqueeze(1),
+                self.torque_wheel[:, 1].unsqueeze(1),
+            ),
+            axis=1,
+        )
 
         return torch.clip(
-            torque * self.torques_scale, -self.torque_limits, self.torque_limits
+            torques * self.torques_scale, -self.torque_limits, self.torque_limits
         )
+
+    def _inverse_kinematics(self, force, torque):  # YXC: this is called VMC in LeggedRobotVMC
+        theta = -self.theta_pos + self.cfg.asset.theta_offset
+        alpha = self.hip_pos + self.cfg.asset.hip_offset
+        beta = self.knee_pos + self.cfg.asset.knee_offset
+        end_x = (- self.cfg.asset.thigh_len * torch.cos(alpha)
+                 + self.cfg.asset.shin_len * torch.cos(torch.pi - beta - alpha))
+        end_y = (self.cfg.asset.thigh_len * torch.sin(alpha)
+                 + self.cfg.asset.shin_len * torch.sin(torch.pi - beta - alpha))
+        hip_arm_f = torch.sqrt(end_x ** 2 + end_y ** 2) * torch.sin(torch.atan(end_y / end_x) - theta)
+        hip_arm_t = torch.sqrt(end_x ** 2 + end_y ** 2) * torch.cos(torch.atan(end_y / end_x) - theta)
+        hip_torque = hip_arm_f * force + hip_arm_t * torque / self.leg_pos
+
+        knee_arm_f = self.cfg.asset.shin_len * torch.sin(theta - (torch.pi - beta - alpha))
+        knee_arm_t = self.cfg.asset.shin_len * torch.cos(theta - (torch.pi - beta - alpha))
+        knee_torque = -knee_arm_f * force + knee_arm_t * torque / self.leg_pos
+
+        return hip_torque, knee_torque
 
     def _get_noise_scale_vec(self, cfg):
         noise_vec = torch.zeros_like(self.obs_buf[0])
@@ -378,6 +433,34 @@ class MetaWLVMC(LeggedRobot):
         self.d_gains = torch.zeros(
             self.num_envs,
             self.num_dof,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.theta_kp = torch.zeros(
+            self.num_envs,
+            2,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.theta_kd = torch.zeros(
+            self.num_envs,
+            2,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.leg_kp = torch.zeros(
+            self.num_envs,
+            2,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.leg_kd = torch.zeros(
+            self.num_envs,
+            2,
             dtype=torch.float,
             device=self.device,
             requires_grad=False,
@@ -496,6 +579,25 @@ class MetaWLVMC(LeggedRobot):
             self.root_states[:, 2].unsqueeze(1) - self.measured_heights, dim=1
         )
 
+        self.leg_pos = torch.zeros(
+            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.leg_vel = torch.zeros(
+            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.theta_pos = torch.zeros(
+            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.theta_vel = torch.zeros(
+            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.hip_pos = torch.zeros(
+            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.knee_pos = torch.zeros(
+            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
+        )
+
         # joint positions offsets and PD gains
         self.raw_default_dof_pos = torch.zeros(
             self.num_dof,
@@ -529,6 +631,11 @@ class MetaWLVMC(LeggedRobot):
                         f"PD gain of joint {name} were not defined, setting them to zero"
                     )
 
+        self.leg_kp[:] = self.cfg.control.kp_leg
+        self.leg_kd[:] = self.cfg.control.kd_leg
+        self.theta_kp[:] = self.cfg.control.kp_theta
+        self.theta_kd[:] = self.cfg.control.kd_theta
+
         if self.cfg.domain_rand.randomize_Kp:
             (
                 p_gains_scale_min,
@@ -540,6 +647,18 @@ class MetaWLVMC(LeggedRobot):
                 self.p_gains.shape,
                 device=self.device,
             )
+            self.theta_kp *= torch_rand_float(
+                p_gains_scale_min,
+                p_gains_scale_max,
+                self.theta_kp.shape,
+                device=self.device,
+            )
+            self.leg_kp *= torch_rand_float(
+                p_gains_scale_min,
+                p_gains_scale_max,
+                self.leg_kp.shape,
+                device=self.device,
+            )
         if self.cfg.domain_rand.randomize_Kd:
             (
                 d_gains_scale_min,
@@ -549,6 +668,18 @@ class MetaWLVMC(LeggedRobot):
                 d_gains_scale_min,
                 d_gains_scale_max,
                 self.d_gains.shape,
+                device=self.device,
+            )
+            self.theta_kd *= torch_rand_float(
+                d_gains_scale_min,
+                d_gains_scale_max,
+                self.theta_kd.shape,
+                device=self.device,
+            )
+            self.leg_kd *= torch_rand_float(
+                d_gains_scale_min,
+                d_gains_scale_max,
+                self.leg_kd.shape,
                 device=self.device,
             )
         if self.cfg.domain_rand.randomize_motor_torque:
