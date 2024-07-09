@@ -115,28 +115,28 @@ class MetaWLVMC(LeggedRobot):
     def leg_post_physics_step(self):
         self.hip_pos = torch.cat(
             (self.dof_pos[:, JointIdx.l_hip.value].unsqueeze(1),
-                self.dof_pos[:, JointIdx.r_hip.value].unsqueeze(1)),
+             self.dof_pos[:, JointIdx.r_hip.value].unsqueeze(1)),
             dim=1
-        )
+        ) + self.cfg.asset.hip_offset
         self.knee_pos = torch.cat(
             (self.dof_pos[:, JointIdx.l_knee.value].unsqueeze(1),
-                self.dof_pos[:, JointIdx.r_knee.value].unsqueeze(1)),
+             self.dof_pos[:, JointIdx.r_knee.value].unsqueeze(1)),
             dim=1
-        )
+        ) + self.cfg.asset.knee_offset
         self.hip_vel = torch.cat(
             (self.dof_vel[:, JointIdx.l_hip.value].unsqueeze(1),
-                self.dof_vel[:, JointIdx.r_hip.value].unsqueeze(1)),
+             self.dof_vel[:, JointIdx.r_hip.value].unsqueeze(1)),
             dim=1
         )
         self.knee_vel = torch.cat(
             (self.dof_vel[:, JointIdx.l_knee.value].unsqueeze(1),
-                self.dof_vel[:, JointIdx.r_knee.value].unsqueeze(1)),
+             self.dof_vel[:, JointIdx.r_knee.value].unsqueeze(1)),
             dim=1
         )
 
         self.leg_pos, self.theta_pos = self._forward_kinematics(self.hip_pos, self.knee_pos)
 
-        temp_dt = 0.0001
+        temp_dt = 0.001
         leg_next, theta_next = self._forward_kinematics(
             self.hip_pos + self.hip_vel * temp_dt,
             self.knee_pos + self.knee_vel * temp_dt
@@ -146,15 +146,13 @@ class MetaWLVMC(LeggedRobot):
         self.theta_vel = (theta_next - self.leg_pos) / temp_dt
 
     def _forward_kinematics(self, hip_pos, knee_pos):
-        alpha = hip_pos + self.cfg.asset.hip_offset
-        beta = knee_pos + self.cfg.asset.knee_offset
-        end_x = (self.cfg.asset.origin_to_hip
-                 - self.cfg.asset.thigh_len * torch.cos(alpha)
-                 + self.cfg.asset.shin_len * torch.cos(torch.pi - beta - alpha))
-        end_y = (self.cfg.asset.thigh_len * torch.sin(alpha)
-                 + self.cfg.asset.shin_len * torch.sin(torch.pi - beta - alpha))
+        end_x = (- self.cfg.asset.origin_to_hip
+                 + self.cfg.asset.thigh_len * torch.cos(hip_pos)
+                 + self.cfg.asset.shin_len * torch.cos(hip_pos + knee_pos))
+        end_y = (self.cfg.asset.thigh_len * torch.sin(hip_pos)
+                 + self.cfg.asset.shin_len * torch.sin(hip_pos + knee_pos))
         leg = torch.sqrt(end_x ** 2 + end_y ** 2)
-        theta = torch.atan2(end_y, end_x) - self.cfg.asset.theta_offset
+        theta = torch.atan2(end_y, end_x) - torch.pi / 2
         return leg, theta
 
     def reset_idx(self, env_ids):
@@ -302,7 +300,7 @@ class MetaWLVMC(LeggedRobot):
         ) * self.cfg.control.action_scale_leg + self.cfg.asset.leg_offset
 
         # YXC: set theta always to 0
-        theta_ref = torch.zeros_like(leg_ref)
+        theta_ref = torch.zeros_like(leg_ref) + self.cfg.asset.theta_offset
 
         wheel_ref = torch.cat(
             (
@@ -338,22 +336,28 @@ class MetaWLVMC(LeggedRobot):
         )
 
     def _inverse_kinematics(self, force, torque):  # YXC: this is called VMC in LeggedRobotVMC
-        theta = -self.theta_pos + self.cfg.asset.theta_offset
-        alpha = self.hip_pos + self.cfg.asset.hip_offset
-        beta = self.knee_pos + self.cfg.asset.knee_offset
-        end_x = (- self.cfg.asset.thigh_len * torch.cos(alpha)
-                 + self.cfg.asset.shin_len * torch.cos(torch.pi - beta - alpha))
-        end_y = (self.cfg.asset.thigh_len * torch.sin(alpha)
-                 + self.cfg.asset.shin_len * torch.sin(torch.pi - beta - alpha))
-        hip_arm_f = torch.sqrt(end_x ** 2 + end_y ** 2) * torch.sin(torch.atan(end_y / end_x) - theta)
-        hip_arm_t = torch.sqrt(end_x ** 2 + end_y ** 2) * torch.cos(torch.atan(end_y / end_x) - theta)
-        hip_torque = hip_arm_f * force + hip_arm_t * torque / self.leg_pos
+        theta = self.theta_pos + torch.pi / 2
+        t11 = self.cfg.asset.thigh_len * torch.sin(
+            theta - self.hip_pos
+        ) - self.cfg.asset.shin_len * torch.sin(
+            self.hip_pos + self.knee_pos - theta
+        )
 
-        knee_arm_f = self.cfg.asset.shin_len * torch.sin(theta - (torch.pi - beta - alpha))
-        knee_arm_t = self.cfg.asset.shin_len * torch.cos(theta - (torch.pi - beta - alpha))
-        knee_torque = -knee_arm_f * force + knee_arm_t * torque / self.leg_pos
+        t12 = self.cfg.asset.thigh_len * torch.cos(
+            theta - self.hip_pos
+        ) - self.cfg.asset.shin_len * torch.cos(
+            self.hip_pos + self.knee_pos - theta
+        )
 
-        return hip_torque, knee_torque
+        t21 = -self.cfg.asset.shin_len * torch.sin(self.hip_pos + self.knee_pos - theta)
+
+        t22 = -self.cfg.asset.shin_len * torch.cos(self.hip_pos + self.knee_pos - theta)
+        t22 = t22 / self.leg_pos
+
+        t1 = t11 * force - t12 * torque
+        t2 = t21 * force - t22 * torque
+
+        return t1, t2
 
     def _get_noise_scale_vec(self, cfg):
         noise_vec = torch.zeros_like(self.obs_buf[0])
@@ -714,3 +718,7 @@ class MetaWLVMC(LeggedRobot):
     def _reward_nominal_state(self):
         # YXC: overwrite _reward_nominal_state() in LeggedRobot which depends on theta0
         return torch.zeros(self.num_envs, device=self.device)
+
+    def _reward_orientation(self):
+        # YXC: penalize angular velocity in roll and pitch
+        return torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=-1)

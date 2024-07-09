@@ -32,15 +32,15 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         num_actions = len(ActionIdx)  # YXC: 4
         # YXC: remember to update policy accordingly
 
-    class terrain(LeggedRobotCfg.terrain):
-        mesh_type = "plane"
+    # class terrain(LeggedRobotCfg.terrain):
+    #     mesh_type = "plane"
 
     class asset(LeggedRobotCfg.asset):
         file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl.urdf"
         name = "meta_wl"
         penalize_contacts_on = ["shin", "thigh", "base"]
-        terminate_after_contacts_on = ["base"]
-        self_collisions = 1
+        # terminate_after_contacts_on = ["base"]
+        self_collisions = 0
         flip_visual_attachments = False
 
         # YXC: make sure the following parameters are consistent with the URDF file
@@ -48,36 +48,29 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         thigh_len = 0.157  # [m]
         shin_len = 0.143  # [m]
 
-        # links
-        l1 = 0.07  # fixed link
-        l2 = thigh_len  # driving link
-        l3 = shin_len  # follower link
-        l4 = 0.0375  # output link
-        l5 = 0.180 - l4  # output link extension
-
         hip_offset = 1.3090
         knee_offset = 1.6515
 
-        theta_offset = 0.973
-        leg_offset = 0.25
+        theta_offset = -(torch.pi / 2 - 0.973)
+        leg_offset = 0.15
 
     class control(LeggedRobotCfg.control):
-        action_scale_leg = 0.1
-        action_scale_wheel = 10.0
+        action_scale_leg = 0.2
+        action_scale_wheel = 17.0
 
         # PD Drive parameters:
         stiffness = {"hip": 5.0, "knee": 5.0, "wheel": 0}  # [N*m/rad]
-        damping = {"hip": 0.2, "knee": 0.2, "wheel": 0.3}  # [N*m*s/rad]
+        damping = {"hip": 0.2, "knee": 0.2, "wheel": 0.5}  # [N*m*s/rad]
 
-        kp_leg = 0.0  # [N*m/rad]
-        kd_leg = 0.0  # [N*m*s/rad]
-        kp_theta = 0.5  # [N*m/rad]
-        kd_theta = 0.05  # [N*m*s/rad]
+        kp_leg = 900.0  # [N*m/rad]
+        kd_leg = 5.0  # [N*m*s/rad]
+        kp_theta = 10.0  # [N*m/rad]
+        kd_theta = 0.0  # [N*m*s/rad]
 
         feedforward_force = 0.0  # [N]
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.6]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.4]  # x,y,z [m]
         init_hip = 0
         init_knee = 0
         default_joint_angles = {
@@ -89,6 +82,37 @@ class MetaWLVMCCfg(LeggedRobotCfg):
             "r_wheel": 0.0,
         }
 
+    class rewards:
+        class scales:
+            tracking_lin_vel = 1.0
+            tracking_lin_vel_enhance = 1
+            tracking_ang_vel = 1.0
+
+            base_height = 2.0
+            nominal_state = -0.1
+            lin_vel_z = -2.0
+            ang_vel_xy = -0.05
+            orientation = -1.0
+
+            dof_vel = -5e-5
+            dof_acc = -2.5e-7
+            torques = -0.0001
+            action_rate = -0.01
+            action_smooth = -0.01
+
+            collision = -1.0
+            dof_pos_limits = -1.0
+
+        only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
+        clip_single_reward = 1
+        tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
+        soft_dof_pos_limit = (
+            0.97  # percentage of urdf limits, values above this limit are penalized
+        )
+        soft_dof_vel_limit = 1.0
+        soft_torque_limit = 1.0
+        base_height_target = 0.23
+        max_contact_force = 100.0  # forces above this value are penalized
 
 class MetaWLVMCCfgPPO(LeggedRobotCfgPPO):
     seed = 10
