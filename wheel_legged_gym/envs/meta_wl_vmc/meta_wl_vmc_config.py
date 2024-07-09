@@ -25,8 +25,8 @@ class JointIdx(Enum):
 class MetaWLVMCCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         num_envs = 1024
-        num_observations = 18  # YXC: defined in _compute_proprioception_observations()
-        num_privileged_obs = 142  # TODO: change accordingly
+        num_observations = 19  # YXC: defined in _compute_proprioception_observations()
+        num_privileged_obs = 133  # TODO: change accordingly
         num_actions = len(ActionIdx)  # YXC: 4
         # YXC: remember to update policy accordingly
 
@@ -37,7 +37,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl.urdf"
         name = "meta_wl"
         penalize_contacts_on = ["leg_link", "base_link"]
-        # terminate_after_contacts_on = ["base"]
+        terminate_after_contacts_on = ["base_link"]
         self_collisions = 0
         flip_visual_attachments = False
 
@@ -45,10 +45,11 @@ class MetaWLVMCCfg(LeggedRobotCfg):
 
     class control(LeggedRobotCfg.control):
         action_scale_leg = 0.2
-        action_scale_wheel = 17.0
+        action_scale_wheel = 20.0
 
-        kp_leg = 900.0  # [N*m/rad]
-        kd_leg = 20.0  # [N*m*s/rad]
+        # PD Drive parameters:
+        stiffness = {"leg": 900.0, "wheel": 0}  # [N*m/rad]
+        damping = {"leg": 20.0, "wheel": 0.5}  # [N*m*s/rad]
 
         feedforward_force = 0.0  # [N]
 
@@ -67,11 +68,11 @@ class MetaWLVMCCfg(LeggedRobotCfg):
             tracking_lin_vel_enhance = 1
             tracking_ang_vel = 1.0
 
-            base_height = 5.0
+            base_height = 1.0
             nominal_state = -0.1
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
-            orientation = -4.0
+            orientation = -10.0
 
             dof_vel = -5e-5
             dof_acc = -2.5e-7

@@ -77,12 +77,8 @@ class MetaWLVMC(LeggedRobot):
 
         # prepare quantities
         self.base_quat[:] = self.root_states[:, 3:7]
-        self.base_euler_angle = torch.stack(get_euler_xyz(self.base_quat), dim=-1)
-        # self.base_lin_vel = (self.base_position - self.last_base_position) / self.dt
-        # self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.base_lin_vel)
-        self.base_lin_vel = quat_rotate_inverse(
-            self.base_quat, self.root_states[:, 7:10]
-        )
+        self.base_lin_vel = (self.base_position - self.last_base_position) / self.dt
+        self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.base_lin_vel)
         self.base_ang_vel = self.root_states[:, 10:13]
         # self.base_ang_vel[:] = quat_rotate_inverse(
         #     self.base_quat, self.root_states[:, 10:13]
@@ -115,30 +111,30 @@ class MetaWLVMC(LeggedRobot):
             self._draw_debug_vis()
 
     def check_termination(self):
-        # """Check if environments need to be reset"""
-        # fail_buf = torch.any(
-        #     torch.norm(
-        #         self.contact_forces[:, self.termination_contact_indices, :], dim=-1
-        #     )
-        #     > 10.0,
-        #     dim=1,
-        # )
-        # fail_buf |= self.projected_gravity[:, 2] > -0.1
-        # self.fail_buf *= fail_buf
-        # self.fail_buf += fail_buf
-        # self.time_out_buf = (
-        #     self.episode_length_buf > self.max_episode_length
-        # )  # no terminal reward for time-outs
-        # if self.cfg.terrain.mesh_type in ["heightfield", "trimesh"]:
-        #     self.edge_reset_buf = self.base_position[:, 0] > self.terrain_x_max - 1
-        #     self.edge_reset_buf |= self.base_position[:, 0] < self.terrain_x_min + 1
-        #     self.edge_reset_buf |= self.base_position[:, 1] > self.terrain_y_max - 1
-        #     self.edge_reset_buf |= self.base_position[:, 1] < self.terrain_y_min + 1
-        # self.reset_buf = (
-        #     (self.fail_buf > self.cfg.env.fail_to_terminal_time_s / self.dt)
-        #     | self.time_out_buf
-        #     | self.edge_reset_buf
-        # )
+        """Check if environments need to be reset"""
+        fail_buf = torch.any(
+            torch.norm(
+                self.contact_forces[:, self.termination_contact_indices, :], dim=-1
+            )
+            > 10.0,
+            dim=1,
+        )
+        fail_buf |= self.projected_gravity[:, 2] > -0.1
+        self.fail_buf *= fail_buf
+        self.fail_buf += fail_buf
+        self.time_out_buf = (
+                self.episode_length_buf > self.max_episode_length
+        )  # no terminal reward for time-outs
+        if self.cfg.terrain.mesh_type in ["heightfield", "trimesh"]:
+            self.edge_reset_buf = self.base_position[:, 0] > self.terrain_x_max - 1
+            self.edge_reset_buf |= self.base_position[:, 0] < self.terrain_x_min + 1
+            self.edge_reset_buf |= self.base_position[:, 1] > self.terrain_y_max - 1
+            self.edge_reset_buf |= self.base_position[:, 1] < self.terrain_y_min + 1
+        self.reset_buf = (
+                (self.fail_buf > self.cfg.env.fail_to_terminal_time_s / self.dt)
+                | self.time_out_buf
+                | self.edge_reset_buf
+        )
         self.time_out_buf = self.episode_length_buf > self.max_episode_length
         self.reset_buf = self.time_out_buf
 
@@ -224,7 +220,7 @@ class MetaWLVMC(LeggedRobot):
     def compute_proprioception_observations(self):
         obs_buf = torch.cat(
             (
-                self.base_euler_angle[:, :2] * self.obs_scales.ang_vel,  # YXC: roll and pitch
+                self.projected_gravity,
                 self.base_ang_vel * self.obs_scales.ang_vel,
                 self.commands[:, :3] * self.commands_scale,
                 self.dof_pos[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]] * self.obs_scales.dof_pos,
@@ -234,7 +230,7 @@ class MetaWLVMC(LeggedRobot):
             ),
             dim=-1,
         )
-        # YXC: 2 + 3 + 3 + 2 + 2 + 2 + 4 = 18
+        # YXC: 3 + 3 + 3 + 2 + 2 + 2 + 4 = 19
         return obs_buf
 
     def compute_observations(self):
@@ -293,7 +289,9 @@ class MetaWLVMC(LeggedRobot):
             ), axis=1,
         ) * self.cfg.control.action_scale_wheel
 
-        self.force_leg = self.leg_kp * (leg_ref - self.leg_pos) - self.leg_kd * self.leg_vel
+        self.force_leg = (self.p_gains[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]] * (leg_ref - self.leg_pos)
+                          - self.d_gains[:, [JointIdx.l_leg.value, JointIdx.r_wheel.value]] * self.leg_vel
+                          + self.cfg.control.feedforward_force)
         self.torque_wheel = self.d_gains[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]] * (
                 wheel_ref - self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]]
         )
@@ -350,7 +348,6 @@ class MetaWLVMC(LeggedRobot):
         self.dof_vel = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 1]
         self.dof_acc = torch.zeros_like(self.dof_vel)
         self.base_quat = self.root_states[:, 3:7]
-        self.base_euler_angle = torch.stack(get_euler_xyz(self.base_quat), dim=-1)
 
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(
             self.num_envs, -1, 3
@@ -390,20 +387,6 @@ class MetaWLVMC(LeggedRobot):
         self.d_gains = torch.zeros(
             self.num_envs,
             self.num_dof,
-            dtype=torch.float,
-            device=self.device,
-            requires_grad=False,
-        )
-        self.leg_kp = torch.zeros(
-            self.num_envs,
-            2,
-            dtype=torch.float,
-            device=self.device,
-            requires_grad=False,
-        )
-        self.leg_kd = torch.zeros(
-            self.num_envs,
-            2,
             dtype=torch.float,
             device=self.device,
             requires_grad=False,
@@ -528,12 +511,6 @@ class MetaWLVMC(LeggedRobot):
         self.leg_vel = torch.zeros(
             self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
         )
-        self.hip_pos = torch.zeros(
-            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.knee_pos = torch.zeros(
-            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
-        )
 
         # joint positions offsets and PD gains
         self.raw_default_dof_pos = torch.zeros(
@@ -568,9 +545,6 @@ class MetaWLVMC(LeggedRobot):
                         f"PD gain of joint {name} were not defined, setting them to zero"
                     )
 
-        self.leg_kp[:] = self.cfg.control.kp_leg
-        self.leg_kd[:] = self.cfg.control.kd_leg
-
         if self.cfg.domain_rand.randomize_Kp:
             (
                 p_gains_scale_min,
@@ -582,12 +556,6 @@ class MetaWLVMC(LeggedRobot):
                 self.p_gains.shape,
                 device=self.device,
             )
-            self.leg_kp *= torch_rand_float(
-                p_gains_scale_min,
-                p_gains_scale_max,
-                self.leg_kp.shape,
-                device=self.device,
-            )
         if self.cfg.domain_rand.randomize_Kd:
             (
                 d_gains_scale_min,
@@ -597,12 +565,6 @@ class MetaWLVMC(LeggedRobot):
                 d_gains_scale_min,
                 d_gains_scale_max,
                 self.d_gains.shape,
-                device=self.device,
-            )
-            self.leg_kd *= torch_rand_float(
-                d_gains_scale_min,
-                d_gains_scale_max,
-                self.leg_kd.shape,
                 device=self.device,
             )
         if self.cfg.domain_rand.randomize_motor_torque:
@@ -638,6 +600,6 @@ class MetaWLVMC(LeggedRobot):
         # YXC: overwrite _reward_nominal_state() in LeggedRobot which depends on theta0
         return torch.zeros(self.num_envs, device=self.device)
 
-    def _reward_orientation(self):
-        # YXC: penalize angular velocity in roll and pitch
-        return torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=-1)
+    def _reward_dof_vel(self):
+        # Penalize dof velocities
+        return torch.zeros(self.num_envs, device=self.device)
