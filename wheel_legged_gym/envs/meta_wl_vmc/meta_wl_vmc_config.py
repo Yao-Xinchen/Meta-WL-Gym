@@ -16,19 +16,17 @@ class ActionIdx(Enum):
 
 
 class JointIdx(Enum):
-    l_hip = 0
-    l_knee = 1
-    l_wheel = 2
-    r_hip = 3
-    r_knee = 4
-    r_wheel = 5
+    l_leg = 0
+    l_wheel = 1
+    r_leg = 2
+    r_wheel = 3
 
 
 class MetaWLVMCCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         num_envs = 1024
         num_observations = 18  # YXC: defined in _compute_proprioception_observations()
-        num_privileged_obs = 142
+        num_privileged_obs = 142  # TODO: change accordingly
         num_actions = len(ActionIdx)  # YXC: 4
         # YXC: remember to update policy accordingly
 
@@ -38,48 +36,29 @@ class MetaWLVMCCfg(LeggedRobotCfg):
     class asset(LeggedRobotCfg.asset):
         file = "{WHEEL_LEGGED_GYM_ROOT_DIR}/resources/robots/meta_wl/urdf/meta_wl.urdf"
         name = "meta_wl"
-        penalize_contacts_on = ["shin", "thigh", "base"]
+        penalize_contacts_on = ["leg_link", "base_link"]
         # terminate_after_contacts_on = ["base"]
         self_collisions = 0
         flip_visual_attachments = False
 
-        # YXC: make sure the following parameters are consistent with the URDF file
-        origin_to_hip = 0.022  # [m]
-        thigh_len = 0.157  # [m]
-        shin_len = 0.143  # [m]
-
-        hip_offset = 1.3090
-        knee_offset = 1.6515
-
-        theta_offset = -(torch.pi / 2 - 0.973)
-        leg_offset = 0.15
+        leg_offset = 0.0
 
     class control(LeggedRobotCfg.control):
         action_scale_leg = 0.2
         action_scale_wheel = 17.0
 
-        # PD Drive parameters:
-        stiffness = {"hip": 5.0, "knee": 5.0, "wheel": 0}  # [N*m/rad]
-        damping = {"hip": 0.2, "knee": 0.2, "wheel": 0.5}  # [N*m*s/rad]
-
         kp_leg = 900.0  # [N*m/rad]
-        kd_leg = 5.0  # [N*m*s/rad]
-        kp_theta = 10.0  # [N*m/rad]
-        kd_theta = 0.0  # [N*m*s/rad]
+        kd_leg = 20.0  # [N*m*s/rad]
 
         feedforward_force = 0.0  # [N]
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.4]  # x,y,z [m]
-        init_hip = 0
-        init_knee = 0
         default_joint_angles = {
-            "l_hip": init_hip,
-            "l_knee": init_knee,
-            "l_wheel": 0.0,
-            "r_hip": init_hip,
-            "r_knee": init_knee,
-            "r_wheel": 0.0,
+            "l_leg_joint": 0,
+            "r_leg_joint": 0,
+            "l_wheel_joint": 0,
+            "r_wheel_joint": 0,
         }
 
     class rewards:
@@ -114,8 +93,9 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         base_height_target = 0.30
         max_contact_force = 100.0  # forces above this value are penalized
 
+
 class MetaWLVMCCfgPPO(LeggedRobotCfgPPO):
-    seed = 10
+    seed = 1
     runner_class_name = "OnPolicyRunner"
 
     class policy:

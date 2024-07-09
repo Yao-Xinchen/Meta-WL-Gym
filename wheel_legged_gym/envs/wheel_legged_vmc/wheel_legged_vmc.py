@@ -427,12 +427,15 @@ class LeggedRobotVMC(LeggedRobot):
         theta0 = self.theta0 + self.pi / 2
         t11 = self.cfg.asset.l1 * torch.sin(
             theta0 - self.theta1
-        ) - self.cfg.asset.l2 * torch.sin(self.theta1 + self.theta2 - theta0)
+        ) - self.cfg.asset.l2 * torch.sin(
+            self.theta1 + self.theta2 - theta0
+        )
 
         t12 = self.cfg.asset.l1 * torch.cos(
             theta0 - self.theta1
-        ) - self.cfg.asset.l2 * torch.cos(self.theta1 + self.theta2 - theta0)
-        t12 = t12 / self.L0
+        ) - self.cfg.asset.l2 * torch.cos(
+            self.theta1 + self.theta2 - theta0
+        )
 
         t21 = -self.cfg.asset.l2 * torch.sin(self.theta1 + self.theta2 - theta0)
 
