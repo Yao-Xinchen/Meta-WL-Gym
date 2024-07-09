@@ -88,11 +88,11 @@ class MetaWLVMCCfg(LeggedRobotCfg):
             tracking_lin_vel_enhance = 1
             tracking_ang_vel = 1.0
 
-            base_height = 2.0
+            base_height = 5.0
             nominal_state = -0.1
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
-            orientation = -1.0
+            orientation = -4.0
 
             dof_vel = -5e-5
             dof_acc = -2.5e-7
@@ -111,7 +111,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         )
         soft_dof_vel_limit = 1.0
         soft_torque_limit = 1.0
-        base_height_target = 0.23
+        base_height_target = 0.30
         max_contact_force = 100.0  # forces above this value are penalized
 
 class MetaWLVMCCfgPPO(LeggedRobotCfgPPO):

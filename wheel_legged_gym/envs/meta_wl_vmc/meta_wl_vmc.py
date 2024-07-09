@@ -155,6 +155,34 @@ class MetaWLVMC(LeggedRobot):
         theta = torch.atan2(end_y, end_x) - torch.pi / 2
         return leg, theta
 
+    def check_termination(self):
+        # """Check if environments need to be reset"""
+        # fail_buf = torch.any(
+        #     torch.norm(
+        #         self.contact_forces[:, self.termination_contact_indices, :], dim=-1
+        #     )
+        #     > 10.0,
+        #     dim=1,
+        # )
+        # fail_buf |= self.projected_gravity[:, 2] > -0.1
+        # self.fail_buf *= fail_buf
+        # self.fail_buf += fail_buf
+        # self.time_out_buf = (
+        #     self.episode_length_buf > self.max_episode_length
+        # )  # no terminal reward for time-outs
+        # if self.cfg.terrain.mesh_type in ["heightfield", "trimesh"]:
+        #     self.edge_reset_buf = self.base_position[:, 0] > self.terrain_x_max - 1
+        #     self.edge_reset_buf |= self.base_position[:, 0] < self.terrain_x_min + 1
+        #     self.edge_reset_buf |= self.base_position[:, 1] > self.terrain_y_max - 1
+        #     self.edge_reset_buf |= self.base_position[:, 1] < self.terrain_y_min + 1
+        # self.reset_buf = (
+        #     (self.fail_buf > self.cfg.env.fail_to_terminal_time_s / self.dt)
+        #     | self.time_out_buf
+        #     | self.edge_reset_buf
+        # )
+        self.time_out_buf = self.episode_length_buf > self.max_episode_length
+        self.reset_buf = self.time_out_buf
+
     def reset_idx(self, env_ids):
         """Reset some environments.
             Calls self._reset_dofs(env_ids), self._reset_root_states(env_ids), and self._resample_commands(env_ids)
