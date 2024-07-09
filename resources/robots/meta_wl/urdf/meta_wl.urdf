@@ -97,9 +97,9 @@
     <axis
       xyz="0.72714 0.68649 0" />
     <limit
-      lower="-0.436"
-      upper="0.262"
-      effort="30"
+      lower="-0.125"
+      upper="0.035"
+      effort="100"
       velocity="1000" />
     <dynamics
       damping="0"
@@ -157,6 +157,8 @@
       link="l_wheel_link" />
     <axis
       xyz="0 0 1" />
+    <dynamics damping="0" friction="0"/>
+    <limit effort="5" velocity="1000" />
   </joint>
   <link
     name="r_leg_link">
@@ -211,9 +213,9 @@
     <axis
       xyz="0.72714 0.68649 0" />
     <limit
-      lower="-0.436"
-      upper="0.262"
-      effort="30"
+      lower="-0.125"
+      upper="0.035"
+      effort="100"
       velocity="1000" />
     <dynamics
       damping="0"
@@ -271,5 +273,7 @@
       link="r_wheel_link" />
     <axis
       xyz="0 0 1" />
+    <dynamics damping="0" friction="0"/>
+    <limit effort="5" velocity="1000" />
   </joint>
 </robot>
