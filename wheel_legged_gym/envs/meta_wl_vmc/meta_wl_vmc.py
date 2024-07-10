@@ -603,3 +603,8 @@ class MetaWLVMC(LeggedRobot):
     def _reward_dof_vel(self):
         # Penalize dof velocities
         return torch.zeros(self.num_envs, device=self.device)
+
+    def _reward_stand_still(self):
+        # Penalize motion at zero commands
+        rew = torch.sum(torch.square(self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]]), dim=1)
+        return torch.where(self.commands[:, 0] < 0.1, rew, torch.zeros_like(rew))
