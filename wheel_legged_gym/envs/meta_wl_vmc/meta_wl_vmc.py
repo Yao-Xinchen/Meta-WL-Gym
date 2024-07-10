@@ -79,10 +79,10 @@ class MetaWLVMC(LeggedRobot):
         self.base_quat[:] = self.root_states[:, 3:7]
         self.base_lin_vel = (self.base_position - self.last_base_position) / self.dt
         self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.base_lin_vel)
-        self.base_ang_vel = self.root_states[:, 10:13]
-        # self.base_ang_vel[:] = quat_rotate_inverse(
-        #     self.base_quat, self.root_states[:, 10:13]
-        # )
+        # self.base_ang_vel = self.root_states[:, 10:13]
+        self.base_ang_vel[:] = quat_rotate_inverse(
+            self.base_quat, self.root_states[:, 10:13]
+        )
         self.dof_acc = (self.last_dof_vel - self.dof_vel) / self.dt
 
         self.projected_gravity[:] = quat_rotate_inverse(
@@ -104,8 +104,8 @@ class MetaWLVMC(LeggedRobot):
         self.last_dof_vel[:] = self.dof_vel[:]
         self.last_root_vel[:] = self.root_states[:, 7:13]
 
-        self.leg_pos[:, :] = self.dof_pos[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]]
-        self.leg_vel[:, :] = self.dof_vel[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]]
+        self.leg_pos = self.dof_pos[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]]
+        self.leg_vel = self.dof_vel[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]]
 
         if self.viewer and self.enable_viewer_sync and self.debug_viz:
             self._draw_debug_vis()
@@ -220,8 +220,8 @@ class MetaWLVMC(LeggedRobot):
     def compute_proprioception_observations(self):
         obs_buf = torch.cat(
             (
-                self.projected_gravity,
                 self.base_ang_vel * self.obs_scales.ang_vel,
+                self.projected_gravity,
                 self.commands[:, :3] * self.commands_scale,
                 self.dof_pos[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]] * self.obs_scales.dof_pos,
                 self.dof_vel[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]] * self.obs_scales.dof_vel,
@@ -317,12 +317,12 @@ class MetaWLVMC(LeggedRobot):
         noise_level = self.cfg.noise.noise_level
 
         # YXC: defined according to the observation in compute_proprioception_observations()
-        noise_vec[0:2] = noise_scales.ang_pos * noise_level * self.obs_scales.ang_pos  # roll and pitch
-        noise_vec[2:5] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
-        noise_vec[5:7] = 0.0  # commands
-        noise_vec[7:9] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos  # dof_pos
-        noise_vec[9:13] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel  # dof_vel
-        noise_vec[13:19] = 0.0  # previous actions
+        noise_vec[:3] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
+        noise_vec[3:6] = noise_scales.gravity * noise_level
+        noise_vec[6:8] = 0.0  # commands
+        noise_vec[8:10] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos  # dof_pos
+        noise_vec[10:14] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel  # dof_vel
+        noise_vec[14:20] = 0.0  # previous actions
         if self.cfg.terrain.measure_heights:
             noise_vec[48:235] = (
                     noise_scales.height_measurements
@@ -472,10 +472,10 @@ class MetaWLVMC(LeggedRobot):
         self.base_lin_vel = quat_rotate_inverse(
             self.base_quat, self.root_states[:, 7:10]
         )  # YXC: base linear velocity relative to its orientation
-        self.base_ang_vel = self.root_states[:, 10:13]  # YXC: no need to rotate
-        # self.base_ang_vel = quat_rotate_inverse(
-        #     self.base_quat, self.root_states[:, 10:13]
-        # )
+        # self.base_ang_vel = self.root_states[:, 10:13]  # YXC: no need to rotate
+        self.base_ang_vel = quat_rotate_inverse(
+            self.base_quat, self.root_states[:, 10:13]
+        )
         self.rigid_body_external_forces = torch.zeros(
             (self.num_envs, self.num_bodies, 3), device=self.device, requires_grad=False
         )
