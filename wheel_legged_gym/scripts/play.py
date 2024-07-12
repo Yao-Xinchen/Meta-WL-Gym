@@ -88,16 +88,20 @@ def play(args):
 
         torch.onnx.export(
             ppo_runner.alg.actor_critic.actor,
-            torch.cat((obs, torch.Tensor(*obs.shape[:-1], 3).to(device=0)), dim=-1),
+            torch.cat((obs, torch.Tensor(*obs.shape[:-1], 3).to(device=0)), dim=-1)[0],
             str(os.path.join(str(path), "actor.onnx")),
             export_params=True,
+            input_names=["observation"],
+            output_names=["action"],
         )
 
         torch.onnx.export(
             ppo_runner.alg.actor_critic.encoder,
-            obs_history,
+            obs_history[0],
             str(os.path.join(str(path), "encoder.onnx")),
             export_params=True,
+            input_names=["observation_history"],
+            output_names=["latent"],
         )
         print("Exported actor and encoder as onnx to: ", path)
 
