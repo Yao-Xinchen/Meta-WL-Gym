@@ -86,6 +86,21 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, path)
         print("Exported policy as jit script to: ", path)
 
+        torch.onnx.export(
+            ppo_runner.alg.actor_critic.actor,
+            torch.cat((obs, torch.Tensor(*obs.shape[:-1], 3).to(device=0)), dim=-1),
+            str(os.path.join(str(path), "actor.onnx")),
+            export_params=True,
+        )
+
+        torch.onnx.export(
+            ppo_runner.alg.actor_critic.encoder,
+            obs_history,
+            str(os.path.join(str(path), "encoder.onnx")),
+            export_params=True,
+        )
+        print("Exported actor and encoder as onnx to: ", path)
+
     logger = Logger(env.dt)
     robot_index = 21  # which robot is used for logging
     joint_index = 1  # which joint is used for logging
