@@ -600,11 +600,18 @@ class MetaWLVMC(LeggedRobot):
         # YXC: overwrite _reward_nominal_state() in LeggedRobot which depends on theta0
         return torch.zeros(self.num_envs, device=self.device)
 
-    def _reward_dof_vel(self):
-        # Penalize dof velocities
-        return torch.zeros(self.num_envs, device=self.device)
-
     def _reward_stand_still(self):
         # Penalize motion at zero commands
         rew = torch.sum(torch.square(self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]]), dim=1)
         return torch.where(self.commands[:, 0] < 0.1, rew, torch.zeros_like(rew))
+
+    def _reward_motion_in_air(self):
+        contacts_forces = gymtorch.wrap_tensor(self.gym.acquire_net_contact_force_tensor(self.sim)).view(
+            [self.num_envs, -1, 3])
+        wheel_contact_forces = contacts_forces[:, [2, 4], :]
+        in_air = torch.all(torch.norm(wheel_contact_forces, dim=-1) < 1, dim=-1)
+        # penalize dof_vel
+        rew = (torch.norm(self.dof_vel[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]], dim=-1)
+               + torch.norm(self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]], dim=-1) * 0.05
+               ) * in_air
+        return rew

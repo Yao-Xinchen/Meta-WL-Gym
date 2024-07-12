@@ -54,7 +54,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         randomize_inertia_range = [0.8, 1.2]
         randomize_base_com = True
         rand_com_vec = [0.05, 0.05, 0.05]
-        push_robots = False
+        push_robots = True
         push_interval_s = 7
         max_push_vel_xy = 2.0
         randomize_Kp = True
@@ -79,7 +79,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         feedforward_force = 15.0  # [N]
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.4]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.8]  # x,y,z [m]
         default_joint_angles = {
             "l_leg_joint": 0,
             "r_leg_joint": 0,
@@ -89,35 +89,35 @@ class MetaWLVMCCfg(LeggedRobotCfg):
 
     class rewards:
         class scales:
-            tracking_lin_vel = 2.0
-            tracking_lin_vel_enhance = 2
-            tracking_ang_vel = 2.0
+            tracking_lin_vel = 1.5
+            tracking_lin_vel_enhance = 1
+            tracking_ang_vel = 1.0
 
-            base_height = 2.0
+            base_height = 1.0
             nominal_state = -0.1
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
-            orientation = -1
+            orientation = -15.0
 
             dof_vel = -5e-5
             dof_acc = -2.5e-7
             torques = -0.0001
             action_rate = -0.01
-            action_smooth = -0.05
+            action_smooth = -0.01
 
-            collision = -3.0
+            collision = -1.0
             dof_pos_limits = -1.0
-            stand_still = -10.0
+            motion_in_air = -0.02
 
         only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
-        clip_single_reward = 5
+        clip_single_reward = 1
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
         soft_dof_pos_limit = (
             0.97  # percentage of urdf limits, values above this limit are penalized
         )
         soft_dof_vel_limit = 1.0
         soft_torque_limit = 1.0
-        base_height_target = 0.25
+        base_height_target = 0.18
         max_contact_force = 100.0  # forces above this value are penalized
 
 
