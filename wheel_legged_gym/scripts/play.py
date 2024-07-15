@@ -86,24 +86,24 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, path)
         print("Exported policy as jit script to: ", path)
 
-        torch.onnx.export(
-            ppo_runner.alg.actor_critic.actor,
-            torch.cat((obs, torch.Tensor(*obs.shape[:-1], 3).to(device=0)), dim=-1)[0],
-            str(os.path.join(str(path), "actor.onnx")),
-            export_params=True,
-            input_names=["observation"],
-            output_names=["action"],
-        )
-
-        torch.onnx.export(
-            ppo_runner.alg.actor_critic.encoder,
-            obs_history[0],
-            str(os.path.join(str(path), "encoder.onnx")),
-            export_params=True,
-            input_names=["observation_history"],
-            output_names=["latent"],
-        )
-        print("Exported actor and encoder as onnx to: ", path)
+        if ppo_runner.alg.actor_critic.is_sequence:
+            torch.onnx.export(
+                ppo_runner.alg.actor_critic.actor,
+                torch.cat((obs, torch.Tensor(*obs.shape[:-1], 3).to(device=0)), dim=-1)[0],
+                str(os.path.join(str(path), "actor.onnx")),
+                export_params=True,
+                input_names=["observation"],
+                output_names=["action"],
+            )
+            torch.onnx.export(
+                ppo_runner.alg.actor_critic.encoder,
+                obs_history[0],
+                str(os.path.join(str(path), "encoder.onnx")),
+                export_params=True,
+                input_names=["observation_history"],
+                output_names=["latent"],
+            )
+            print("Exported actor and encoder as onnx to: ", path)
 
     logger = Logger(env.dt)
     robot_index = 21  # which robot is used for logging
@@ -134,7 +134,7 @@ def play(args):
 
         if CoM_offset_compensate:
             if i > 200 and i < 600:
-                vel_cmd[:] = 2.5 * np.clip((i - 200) * 0.05, 0, 1)
+                vel_cmd[:] = 1.5 * np.clip((i - 200) * 0.05, 0, 1)
             else:
                 vel_cmd[:] = 0
             vel_err_intergral += (

@@ -97,7 +97,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
             nominal_state = -0.1
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
-            orientation = -15.0
+            orientation = -10.0
 
             dof_vel = -5e-5
             dof_acc = -2.5e-7

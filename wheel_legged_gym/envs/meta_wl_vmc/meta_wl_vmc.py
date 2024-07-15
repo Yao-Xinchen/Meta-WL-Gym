@@ -221,8 +221,8 @@ class MetaWLVMC(LeggedRobot):
         obs_buf = torch.cat(
             (
                 self.base_ang_vel * self.obs_scales.ang_vel,
-                self.projected_gravity,
-                self.commands[:, :3] * self.commands_scale,
+                self.projected_gravity,  # YXC: unit vector!!! length is 1 instead of 9.81
+                self.commands[:, :3] * self.commands_scale,  # YXC: [lin_vel_x, ang_vel_yaw, height]
                 self.dof_pos[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]] * self.obs_scales.dof_pos,
                 self.dof_vel[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]] * self.obs_scales.dof_vel,
                 self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]] * self.obs_scales.dof_vel,
@@ -273,28 +273,21 @@ class MetaWLVMC(LeggedRobot):
             (self.obs_history[:, self.num_obs:], self.obs_buf), dim=-1
         )
 
-    # action: [l_leg_pos, r_leg_pos, l_wheel_vel, r_wheel_vel]
+    # YXC: action: [l_leg_pos, r_leg_pos, l_wheel_vel, r_wheel_vel]
     def _compute_torques(self, actions):
-        leg_ref = torch.cat(
-            (
-                actions[:, ActionIdx.l_leg.value].unsqueeze(1),
-                actions[:, ActionIdx.r_leg.value].unsqueeze(1),
-            ), axis=1,
-        ) * self.cfg.control.action_scale_leg + self.cfg.asset.leg_offset
+        # YXC: interpret actions
+        leg_ref = (actions[:, [ActionIdx.l_leg.value, ActionIdx.r_leg.value]]
+                   * self.cfg.control.action_scale_leg
+                   + self.cfg.asset.leg_offset)
+        wheel_ref = (actions[:, [ActionIdx.l_wheel.value, ActionIdx.r_wheel.value]]
+                     * self.cfg.control.action_scale_wheel)
 
-        wheel_ref = torch.cat(
-            (
-                actions[:, ActionIdx.l_wheel.value].unsqueeze(1),
-                actions[:, ActionIdx.r_wheel.value].unsqueeze(1),
-            ), axis=1,
-        ) * self.cfg.control.action_scale_wheel
-
+        # YXC: PD controller
         self.force_leg = (self.p_gains[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]] * (leg_ref - self.leg_pos)
                           - self.d_gains[:, [JointIdx.l_leg.value, JointIdx.r_wheel.value]] * self.leg_vel
                           + self.cfg.control.feedforward_force)
-        self.torque_wheel = self.d_gains[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]] * (
-                wheel_ref - self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]]
-        )
+        self.torque_wheel = (self.d_gains[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]]
+                             * (wheel_ref - self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]]))
 
         torques = torch.cat(
             (
@@ -472,7 +465,6 @@ class MetaWLVMC(LeggedRobot):
         self.base_lin_vel = quat_rotate_inverse(
             self.base_quat, self.root_states[:, 7:10]
         )  # YXC: base linear velocity relative to its orientation
-        # self.base_ang_vel = self.root_states[:, 10:13]  # YXC: no need to rotate
         self.base_ang_vel = quat_rotate_inverse(
             self.base_quat, self.root_states[:, 10:13]
         )
@@ -601,11 +593,12 @@ class MetaWLVMC(LeggedRobot):
         return torch.zeros(self.num_envs, device=self.device)
 
     def _reward_stand_still(self):
-        # Penalize motion at zero commands
+        # YXC: penalize velocity at zero commands
         rew = torch.sum(torch.square(self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]]), dim=1)
         return torch.where(self.commands[:, 0] < 0.1, rew, torch.zeros_like(rew))
 
     def _reward_motion_in_air(self):
+        # YXC: penalize velocity when robot is in air
         contacts_forces = gymtorch.wrap_tensor(self.gym.acquire_net_contact_force_tensor(self.sim)).view(
             [self.num_envs, -1, 3])
         wheel_contact_forces = contacts_forces[:, [2, 4], :]
