@@ -67,6 +67,10 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         randomize_default_dof_pos_range = [-0.05, 0.05]
         randomize_action_delay = True
         delay_ms_range = [0, 10]
+        lift_robots = False
+        lift_duration = 5
+        lift_height = 1.0
+        lift_start_at = [0, 20]  # an episode is 20s
 
     class control(LeggedRobotCfg.control):
         action_scale_leg = 0.1

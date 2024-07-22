@@ -44,6 +44,8 @@ class MetaWLVMC(LeggedRobot):
             )
             if self.cfg.domain_rand.push_robots:
                 self._push_robots()
+            if self.cfg.domain_rand.lift_robots:
+                self._lift_robots()
             self.gym.simulate(self.sim)
             if self.device == "cpu":
                 self.gym.fetch_results(self.sim, True)
@@ -304,6 +306,18 @@ class MetaWLVMC(LeggedRobot):
             torques * self.torques_scale, -self.torque_limits, self.torque_limits
         )
 
+    def _lift_robots(self):
+        running_time = self.envs_steps_buf * self.sim_params.dt
+        # lift those whose running time is between lift_start and lift_start + lift_duration
+        where = (running_time > self.lift_start) & (running_time < self.lift_start + self.cfg.domain_rand.lift_duration)
+        lift_height = self.cfg.domain_rand.lift_height
+        # YXC: move robot to the height immediately and fix it there
+        self.root_states[where, 2] = lift_height
+        self.root_states[where, 3:7] = torch.tensor([0.0, 0.0, 0.0, 1.0], device=self.device, dtype=torch.float)
+        self.root_states[where, 7:10] = 0.0  # linear velocity
+        self.root_states[where, 10:13] = 0.0  # angular velocity
+        self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states))
+
     def _get_noise_scale_vec(self, cfg):
         noise_vec = torch.zeros_like(self.obs_buf[0])
         self.add_noise = self.cfg.noise.add_noise
@@ -346,6 +360,11 @@ class MetaWLVMC(LeggedRobot):
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(
             self.num_envs, -1, 3
         )  # shape: num_envs, num_bodies, xyz axis
+        if self.cfg.domain_rand.lift_robots:
+            earliest = self.cfg.domain_rand.lift_start_at[0]
+            latest = self.cfg.domain_rand.lift_start_at[1]
+            self.lift_start = (torch.rand([self.num_envs, ], dtype=torch.float, device=self.device)
+                               * (latest - earliest) + earliest)
 
         # initialize some data used later on
         self.common_step_counter = 0
