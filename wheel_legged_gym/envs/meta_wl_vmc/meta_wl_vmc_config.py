@@ -108,6 +108,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
             collision = -1.0
             dof_pos_limits = -1.0
             motion_in_air = -0.02
+            leg_motion = -0.05
 
         only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
         clip_single_reward = 1

@@ -231,6 +231,7 @@ class MetaWLVMC(LeggedRobot):
             dim=-1,
         )
         # YXC: 3 + 3 + 3 + 2 + 2 + 2 + 4 = 19
+        # print(self.commands[0, :])
         return obs_buf
 
     def compute_observations(self):
@@ -312,10 +313,10 @@ class MetaWLVMC(LeggedRobot):
         # YXC: defined according to the observation in compute_proprioception_observations()
         noise_vec[:3] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
         noise_vec[3:6] = noise_scales.gravity * noise_level
-        noise_vec[6:8] = 0.0  # commands
-        noise_vec[8:10] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos  # dof_pos
-        noise_vec[10:14] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel  # dof_vel
-        noise_vec[14:20] = 0.0  # previous actions
+        noise_vec[6:9] = 0.0  # commands
+        noise_vec[9:11] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos  # dof_pos
+        noise_vec[11:15] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel  # dof_vel
+        noise_vec[15:19] = 0.0  # previous actions
         if self.cfg.terrain.measure_heights:
             noise_vec[48:235] = (
                     noise_scales.height_measurements
@@ -607,4 +608,9 @@ class MetaWLVMC(LeggedRobot):
         rew = (torch.norm(self.dof_vel[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]], dim=-1)
                + torch.norm(self.dof_vel[:, [JointIdx.l_wheel.value, JointIdx.r_wheel.value]], dim=-1) * 0.05
                ) * in_air
+        return rew
+
+    def _reward_leg_motion(self):
+        # YXC: penalize leg motion
+        rew = torch.norm(self.leg_vel, dim=-1)
         return rew
