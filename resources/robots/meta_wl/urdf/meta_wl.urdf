@@ -1,279 +1,148 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
-     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
-     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
-<robot
-  name="meta_wl">
-  <link
-    name="base_link">
-    <inertial>
-      <origin
-        xyz="-0.00432645090968956 0.000126295986991529 0.0587374233066038"
-        rpy="0 0 0" />
-      <mass
-        value="3.78" />
-      <inertia
-        ixx="36171E-6"
-        ixy="167E-6"
-        ixz="-2777E-6"
-        iyy="13710E-6"
-        iyz="-35E-6"
-        izz="25315E-6" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/base_link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="1 1 1 0.35" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/base_link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <link
-    name="l_leg_link">
-    <inertial>
-      <origin
-        xyz="0.144 0.142 0.013"
-        rpy="0 0 0" />
-      <mass
-        value="0.384" />
-      <inertia
-        ixx="7996E-6"
-        ixy="7866E-6"
-        ixz="725E-6"
-        iyy="8250E-6"
-        iyz="714E-6"
-        izz="15817E-6" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/l_leg_link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/l_leg_link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="l_leg_joint"
-    type="prismatic">
-    <origin
-      xyz="-0.00053949 0.12101 0.071375"
-      rpy="-1.5708 0.59541 -3.1416" />
-    <parent
-      link="base_link" />
-    <child
-      link="l_leg_link" />
-    <axis
-      xyz="0.56085 0.82792 0" />
-    <limit
-      lower="-0.125"
-      upper="0.035"
-      effort="100"
-      velocity="1000" />
-    <dynamics
-      damping="0"
-      friction="0" />
-  </joint>
-  <link
-    name="l_wheel_link">
-    <inertial>
-      <origin
-        xyz="8.84708972748172E-17 8.32667268468867E-17 0.014"
-        rpy="0 0 0" />
-      <mass
-        value="0.363247599426668" />
-      <inertia
-        ixx="0.000498536075854535"
-        ixy="-4.82755938603419E-20"
-        ixz="-1.947156256506E-19"
-        iyy="0.000498536075854535"
-        iyz="6.67158096617965E-19"
-        izz="0.000872747056357901" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/l_wheel_link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="1 1 1 0.35" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/l_wheel_link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="l_wheel_joint"
-    type="revolute">
-    <origin
-      xyz="0.1146 0.13617 -0.04955"
-      rpy="0 0 2.357" />
-    <parent
-      link="l_leg_link" />
-    <child
-      link="l_wheel_link" />
-    <axis
-      xyz="0 0 1" />
-    <dynamics damping="0" friction="0"/>
-    <limit effort="50" velocity="1000" />
-  </joint>
-  <link
-    name="r_leg_link">
-    <inertial>
-      <origin
-        xyz="0.127 0.157 -0.008"
-        rpy="0 0 0" />
-      <mass
-        value="0.384" />
-      <inertia
-        ixx="9734E-6"
-        ixy="7682E-6"
-        ixz="-934E-6"
-        iyy="6415E-6"
-        iyz="-489E-6"
-        izz="15800E-6" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/r_leg_link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="1 1 1 0.35" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/r_leg_link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="r_leg_joint"
-    type="prismatic">
-    <origin
-      xyz="-0.00053949 -0.11599 0.071375"
-      rpy="-1.5708 0.59541 3.1416" />
-    <parent
-      link="base_link" />
-    <child
-      link="r_leg_link" />
-    <axis
-      xyz="0.56085 0.82792 0" />
-    <limit
-      lower="-0.125"
-      upper="0.035"
-      effort="100"
-      velocity="1000" />
-    <dynamics
-      damping="0"
-      friction="0" />
-  </joint>
-  <link
-    name="r_wheel_link">
-    <inertial>
-      <origin
-        xyz="1.28369537222284E-16 0 -0.014"
-        rpy="0 0 0" />
-      <mass
-        value="0.363247599426668" />
-      <inertia
-        ixx="0.000498536075854535"
-        ixy="-6.44346141724632E-21"
-        ixz="-2.44636353554608E-20"
-        iyy="0.000498536075854535"
-        iyz="7.59886657740223E-20"
-        izz="0.000872747056357902" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/r_wheel_link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="1 1 1 0.35" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/r_wheel_link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="r_wheel_joint"
-    type="revolute">
-    <origin
-      xyz="0.1146 0.13617 0.05455"
-      rpy="0 0 2.357" />
-    <parent
-      link="r_leg_link" />
-    <child
-      link="r_wheel_link" />
-    <axis
-      xyz="0 0 1" />
-    <dynamics damping="0" friction="0"/>
-    <limit effort="50" velocity="1000" />
-  </joint>
+    Commit Version: 1.6.0-4-g7f85cfe Build Version: 1.6.7995.38578
+    For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot name="meta_wl">
+    <link name="base_link">
+        <inertial>
+            <origin xyz="-0.0043 0.000126 0.0587" rpy="0 0 0" />
+            <mass value="3.78" />
+            <inertia ixx="36171E-6" ixy="167E-6" ixz="-2777E-6" iyy="13710E-6" iyz="-35E-6" izz="25315E-6" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/base_link.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="1 1 1 0.35" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/base_link.STL" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="l_leg_link">
+        <inertial>
+            <origin xyz="0.144 0.142 0.013" rpy="0 0 0" />
+            <mass value="0.384" />
+            <inertia ixx="7996E-6" ixy="7866E-6" ixz="725E-6" iyy="8250E-6" iyz="714E-6" izz="15817E-6" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/l_leg_link.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/l_leg_link.STL" />
+            </geometry>
+        </collision>
+    </link>
+    <joint name="l_leg_joint" type="prismatic">
+        <origin xyz="-0.00053949 0.12101 0.071375" rpy="-1.5708 0.59541 -3.1416" />
+        <parent link="base_link" />
+        <child link="l_leg_link" />
+        <axis xyz="0.56085 0.82792 0" />
+        <limit lower="-0.125" upper="0.035" effort="100" velocity="1000" />
+        <dynamics damping="0" friction="0" />
+    </joint>
+    <link name="l_wheel_link">
+        <inertial>
+            <origin xyz="8.84708972748172E-17 8.32667268468867E-17 0.014" rpy="0 0 0" />
+            <mass value="0.363247599426668" />
+            <inertia ixx="0.000498536075854535" ixy="-4.82755938603419E-20" ixz="-1.947156256506E-19" iyy="0.000498536075854535" iyz="6.67158096617965E-19" izz="0.000872747056357901" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/l_wheel_link.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="1 1 1 0.35" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/l_wheel_link.STL" />
+            </geometry>
+        </collision>
+    </link>
+    <joint name="l_wheel_joint" type="revolute">
+        <origin xyz="0.1146 0.13617 -0.04955" rpy="0 0 2.357" />
+        <parent link="l_leg_link" />
+        <child link="l_wheel_link" />
+        <axis xyz="0 0 1" />
+        <dynamics damping="0" friction="0"/>
+        <limit effort="50" velocity="1000" />
+    </joint>
+    <link name="r_leg_link">
+        <inertial>
+            <origin xyz="0.127 0.157 -0.008" rpy="0 0 0" />
+            <mass value="0.384" />
+            <inertia ixx="9734E-6" ixy="7682E-6" ixz="-934E-6" iyy="6415E-6" iyz="-489E-6" izz="15800E-6" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/r_leg_link.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="1 1 1 0.35" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/r_leg_link.STL" />
+            </geometry>
+        </collision>
+    </link>
+    <joint name="r_leg_joint" type="prismatic">
+        <origin xyz="-0.00053949 -0.11599 0.071375" rpy="-1.5708 0.59541 3.1416" />
+        <parent link="base_link" />
+        <child link="r_leg_link" />
+        <axis xyz="0.56085 0.82792 0" />
+        <limit lower="-0.125" upper="0.035" effort="100" velocity="1000" />
+        <dynamics damping="0" friction="0" />
+    </joint>
+    <link name="r_wheel_link">
+        <inertial>
+            <origin xyz="1.28369537222284E-16 0 -0.014" rpy="0 0 0" />
+            <mass value="0.363247599426668" />
+            <inertia ixx="0.000498536075854535" ixy="-6.44346141724632E-21" ixz="-2.44636353554608E-20" iyy="0.000498536075854535" iyz="7.59886657740223E-20" izz="0.000872747056357902" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/r_wheel_link.STL" />
+            </geometry>
+            <material name="">
+                <color rgba="1 1 1 0.35" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="../meshes/r_wheel_link.STL" />
+            </geometry>
+        </collision>
+    </link>
+    <joint name="r_wheel_joint" type="revolute">
+        <origin xyz="0.1146 0.13617 0.05455" rpy="0 0 2.357" />
+        <parent link="r_leg_link" />
+        <child link="r_wheel_link" />
+        <axis xyz="0 0 1" />
+        <dynamics damping="0" friction="0"/>
+        <limit effort="50" velocity="1000" />
+    </joint>
 </robot>
