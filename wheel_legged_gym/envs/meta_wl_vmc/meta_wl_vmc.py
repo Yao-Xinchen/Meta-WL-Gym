@@ -108,6 +108,7 @@ class MetaWLVMC(LeggedRobot):
 
         self.leg_pos = self.dof_pos[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]]
         self.leg_vel = self.dof_vel[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]]
+        self.leg_acc = self.dof_acc[:, [JointIdx.l_leg.value, JointIdx.r_leg.value]]
 
         if self.viewer and self.enable_viewer_sync and self.debug_viz:
             self._draw_debug_vis()
@@ -523,6 +524,9 @@ class MetaWLVMC(LeggedRobot):
         self.leg_vel = torch.zeros(
             self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
         )
+        self.leg_acc = torch.zeros(
+            self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
+        )
 
         # joint positions offsets and PD gains
         self.raw_default_dof_pos = torch.zeros(
@@ -632,4 +636,10 @@ class MetaWLVMC(LeggedRobot):
     def _reward_leg_motion(self):
         # YXC: penalize leg motion
         rew = torch.norm(self.leg_vel, dim=-1)
+        return rew
+
+    def _reward_leg_acc(self):
+        # YXC: penalize leg acceleration when its velocity is low
+        where = torch.norm(self.leg_vel, dim=-1) < 0.1
+        rew = torch.norm(self.leg_acc, dim=-1) * where
         return rew

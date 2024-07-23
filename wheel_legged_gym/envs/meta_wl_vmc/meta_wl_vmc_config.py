@@ -80,7 +80,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
         stiffness = {"leg": 700.0, "wheel": 0}  # [N*m/rad]
         damping = {"leg": 20.0, "wheel": 0.25}  # [N*m*s/rad]
 
-        feedforward_force = 15.0  # [N]
+        feedforward_force = 0.0  # [N]
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.8]  # x,y,z [m]
@@ -93,7 +93,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
 
     class rewards:
         class scales:
-            tracking_lin_vel = 1.5
+            tracking_lin_vel = 1.0
             tracking_lin_vel_enhance = 1
             tracking_ang_vel = 1.0
 
@@ -113,6 +113,7 @@ class MetaWLVMCCfg(LeggedRobotCfg):
             dof_pos_limits = -1.0
             motion_in_air = -0.02
             leg_motion = -0.05
+            leg_acc = -0.01
 
         only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
         clip_single_reward = 1
