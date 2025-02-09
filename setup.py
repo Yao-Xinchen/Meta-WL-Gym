@@ -18,6 +18,5 @@ setup(
         "numpy<1.20.0",
         "GitPython",
         "onnx",
-        "onnxscript"
     ],
 )
